@@ -8,118 +8,124 @@ use image::{DynamicImage, GenericImage, GenericImageView, ImageResult};
 
 
 fn main() {
-    let solved_path =  "solved/slika1.jpg";
-
+    let solved_path = "solved/test.png";
     let solved_image = image::open(solved_path).unwrap_or_else(|_| {
         eprintln!("Failed to open image: {:?}", solved_path);
         DynamicImage::new_rgba8(1, 1)
     });
 
-
-
-    // let mut pieces = piece::load_images_from_folder("jedan_red");
-    // let mut pieces = piece::load_images_from_folder("slika1");
-    let mut pieces = piece::load_images_from_folder("slika1");
+    let mut pieces = piece::load_images_from_folder("test");
     let mut pieces_ro = pieces.clone();
 
-    let (common_width, common_height)  = piece::find_most_common_dimensions(&pieces);
-
+    let (common_width, common_height) = piece::find_most_common_dimensions(&pieces);
     let horizontal_pieces_num = solved_image.width() / common_width;
+    let vertical_pieces_num = pieces.len() as u32 / horizontal_pieces_num;
 
-    //Initially choose right neighbors
-    for piece in &mut pieces{
-        let mut min_diff = u32::MAX;
-        //TODO check safer solution
-        let mut min_index = 0;
 
-        for comparing_piece in &pieces_ro{
-            if piece.index == comparing_piece.index{
+    loop {
+        let all_indexes: Vec<usize> = (0..pieces.len()).collect();
+        let taken_indexes: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
+
+
+        if taken_indexes.len() == all_indexes.len() {
+            break;
+        }
+
+        //Initially choose right neighbors
+        for piece in &mut pieces {
+            if piece.right_neighbor != None {
                 continue;
             }
 
-            let difference = comparing::compare_right_edge(&piece.image, &comparing_piece.image);
-            if difference < min_diff{
-                min_index = comparing_piece.index;
-                min_diff = difference;
-            }
-        }
 
-        piece.right_neighbor = Some(min_index);
-
-    }
-
-    for piece in &pieces{
-        println!("{}", piece);
-    }
-
-    // REMOVING DOUBLE REFS
-
-    pieces_ro = pieces.clone();
-
-
-
-    for piece_idx in 0..pieces.len() as u32{
-        // .0 is idx of disputed piece, .1 is idx of piece that contains him as right neighbor
-        let mut contain_as_neighbor : Vec<(u32,u32)> = vec![];
-
-        for piece in &pieces_ro{
-            if let Some(right_neighbor) = piece.right_neighbor {
-                if right_neighbor == piece_idx {
-                    contain_as_neighbor.push((piece_idx, piece.index));
-                }
-            }
-        }
-
-        if(contain_as_neighbor.len() > 1){
             let mut min_diff = u32::MAX;
             //TODO check safer solution
-            let mut min_idx = 0;
+            let mut min_index = 0;
 
-            for contestant in &contain_as_neighbor{
-                let disputed_piece = &pieces_ro[contestant.0 as usize];
-                let contestant_piece = &pieces_ro[contestant.1 as usize];
+            for comparing_piece in &pieces_ro {
+                if piece.index == comparing_piece.index || taken_indexes.contains(&comparing_piece.index) {
+                    continue;
+                }
 
-                let difference = comparing::compare_right_edge(&contestant_piece.image, &disputed_piece.image);
-
-                if difference < min_diff{
+                let difference = comparing::compare_right_edge(&piece.image, &comparing_piece.image);
+                if difference < min_diff {
+                    min_index = comparing_piece.index;
                     min_diff = difference;
-                    min_idx = contestant.1;
                 }
             }
 
-            //Contestant with min diff gets disputed piece as right neighbors and others get None
-            let mut winner = &mut pieces[min_idx as usize];
-            winner.right_neighbor = Some(piece_idx);
-            pieces_ro = pieces.clone();
+            piece.right_neighbor = Some(min_index);
+        }
+        pieces_ro = pieces.clone();
 
-            for contestant in &contain_as_neighbor{
-                if contestant.1 == min_idx{
-                    continue;
+        // REMOVING DOUBLE REFS
+
+        for piece_idx in 0..pieces.len() as u32 {
+            // .0 is idx of disputed piece, .1 is idx of piece that contains him as right neighbor
+            let mut contain_as_neighbor: Vec<(u32, u32)> = vec![];
+
+            for piece in &pieces_ro {
+                if let Some(right_neighbor) = piece.right_neighbor {
+                    if right_neighbor == piece_idx {
+                        contain_as_neighbor.push((piece_idx, piece.index));
+                    }
                 }
-                let mut loser = &mut pieces[contestant.1 as usize];
-                loser.right_neighbor = None;
+            }
+
+            if (contain_as_neighbor.len() > 1) {
+                let mut min_diff = u32::MAX;
+                //TODO check safer solution
+                let mut min_idx = 0;
+
+                for contestant in &contain_as_neighbor {
+                    let disputed_piece = &pieces_ro[contestant.0 as usize];
+                    let contestant_piece = &pieces_ro[contestant.1 as usize];
+
+                    let difference = comparing::compare_right_edge(&contestant_piece.image, &disputed_piece.image);
+
+                    if difference < min_diff {
+                        min_diff = difference;
+                        min_idx = contestant.1;
+                    }
+                }
+
+                //Contestant with min diff gets disputed piece as right neighbors and others get None
+                let mut winner = &mut pieces[min_idx as usize];
+                winner.right_neighbor = Some(piece_idx);
                 pieces_ro = pieces.clone();
+
+                for contestant in &contain_as_neighbor {
+                    if contestant.1 == min_idx {
+                        continue;
+                    }
+                    let mut loser = &mut pieces[contestant.1 as usize];
+                    loser.right_neighbor = None;
+                    pieces_ro = pieces.clone();
+                }
             }
         }
 
+        //UPDATING RO
+        pieces_ro = pieces.clone();
     }
 
-    //UPDATING RO
-    pieces_ro = pieces.clone();
 
-    println!("AFTER CONFLICT RESOLVING");
-    for piece in &pieces{
-        println!("{}", piece);
-    }
-
+    let mut threshold = 0;
+    loop {
+    threshold += 100;
     //Finding right edge pieces
-    for piece in &pieces_ro{
+    for piece in &pieces_ro {
         // Slide across solved edge one pixel at at a time and compare
         let mut solved_edge = DynamicImage::new_rgba8(1, piece.image.height());
 
-        for y_idx in 0..solved_image.height() - piece.image.height(){
+        let mut one_row_nly = 0;
+        if solved_image.height() - piece.image.height() == 0 {
+            one_row_nly = 1;
+        }
+
+        for y_idx in 0..solved_image.height() - piece.image.height() + one_row_nly {
             let mut solved_edge_idx = 0;
-            for y in y_idx..y_idx + piece.image.height() - 1{
+            for y in y_idx..y_idx + piece.image.height() - 1 {
                 let mut pixel = solved_image.get_pixel(solved_image.width() - 1, y);
                 solved_edge.put_pixel(0, solved_edge_idx, pixel);
                 solved_edge_idx += 1;
@@ -129,9 +135,10 @@ fn main() {
 
             //Matching
             //TODO: SCALE THRESHOLD
+            // KADA GA ISKLJUCIM ZA SLIKU 1-1 SMANJI BROJ NEREFERENCIRANIH ZA 8
             //Threshold: each channel allowed deviation is 25
-            let threshold = piece.image.height() * 75;
-            if difference < threshold{
+            // let threshold = piece.image.height() * 75;
+            if difference < threshold {
                 pieces[piece.index as usize].right_neighbor = None;
                 break;
             }
@@ -140,12 +147,6 @@ fn main() {
 
     //UPDATING RO
     pieces_ro = pieces.clone();
-
-    println!("AFTER RIGHT EDGE PIECES FINDING");
-    for piece in &pieces{
-        println!("{}", piece);
-    }
-
 
 
     //Finding pieces that are on the left edge
@@ -159,10 +160,23 @@ fn main() {
     // Find the difference to get indexes that are never in right_neighbor
     let unreferenced_indexes: HashSet<_> = all_indexes.difference(&indexes_in_right_neighbor).collect();
 
-    // Now 'unreferenced_indexes' contains all indexes never present in right_neighbor
-    for index in &unreferenced_indexes {
-        println!("Unreferenced Index: {}", index);
+    println!("UNREF NUM: {}", unreferenced_indexes.len());
+    if unreferenced_indexes.len() as u32 == vertical_pieces_num{
+        break;
     }
+
+}
+
+    //MERGING PIECES
+    // Collect all unique indexes present in right_neighbor fields
+    let indexes_in_right_neighbor: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
+
+    // Create a set of all indexes
+    let all_indexes: HashSet<_> = pieces.iter().map(|piece| piece.index).collect();
+
+    // Find the difference to get indexes that are never in right_neighbor
+    let unreferenced_indexes: HashSet<_> = all_indexes.difference(&indexes_in_right_neighbor).collect();
+
 
     //Merge all images that are in same horizontal line
     let mut file_counter = 0;
