@@ -20,22 +20,20 @@ fn main() {
 
     //TESTING
 
-    let piece3 = &pieces[5];
-    let piece1 = &pieces[1];
-    let piece9 = &pieces[11];
-    let edgy_image = DynamicImage::new_rgba8(1,10);
-
-    let difference31 = comparing::compare_right_edge_euclidean(&piece3.image, &piece1.image);
-    let difference19 = comparing::compare_right_edge_euclidean(&piece1.image, &piece9.image);
-    let difference_same_edge = comparing::compare_right_edge_euclidean(&edgy_image, &edgy_image);
-
-    println!("DIFF 3 and 1: {}", difference31);
-    println!("DIFF 1 and 9: {}", difference19);
-    println!("DIFF same edge: {}", difference_same_edge);
-
-    let edgy_image = DynamicImage::new_rgba8(1,10);
-
-   return;
+   //  let piece3 = &pieces[5];
+   //  let piece1 = &pieces[1];
+   //  let piece9 = &pieces[11];
+   //  let edgy_image = DynamicImage::new_rgba8(1,10);
+   //
+   //      let difference31 = comparing::compare_right_edge_abs(&piece3.image, &piece1.image, 110) as i32;
+   //      let difference19 = comparing::compare_right_edge_abs(&piece1.image, &piece9.image, 110) as i32;
+   //
+   //      println!("DIFF 3 and 1: {}", difference31);
+   //      println!("DIFF 1 and 9: {}", difference19);
+   //      println!("DIFF19 - DIFF31: {}", difference19 - difference31);
+   //
+   //
+   // return;
     //TESTING
 
     let (common_width, common_height) = piece::find_most_common_dimensions(&pieces);
