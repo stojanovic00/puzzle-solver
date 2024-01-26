@@ -25,12 +25,13 @@ fn main() {
    //  let piece9 = &pieces[11];
    //  let edgy_image = DynamicImage::new_rgba8(1,10);
    //
-   //      let difference31 = comparing::compare_right_edge_abs(&piece3.image, &piece1.image, 110) as i32;
-   //      let difference19 = comparing::compare_right_edge_abs(&piece1.image, &piece9.image, 110) as i32;
+    let comp_thresh = 30.0;
+   //  let difference31 = comparing::compare_right_edge_hue(&piece3.image, &piece1.image, comp_thresh) as i32;
+   //  let difference19 = comparing::compare_right_edge_hue(&piece1.image, &piece9.image, comp_thresh) as i32;
    //
-   //      println!("DIFF 3 and 1: {}", difference31);
-   //      println!("DIFF 1 and 9: {}", difference19);
-   //      println!("DIFF19 - DIFF31: {}", difference19 - difference31);
+   //  println!("DIFF 3 and 1: {}", difference31);
+   //  println!("DIFF 1 and 9: {}", difference19);
+   //  println!("DIFF19 - DIFF31: {}", difference19 - difference31);
    //
    //
    // return;
@@ -50,7 +51,7 @@ fn main() {
             break;
         }
 
-        //Initially choose right neighbors
+        //Choose right neighbors
         for piece in &mut pieces {
             if piece.right_neighbor != None {
                 continue;
@@ -66,13 +67,13 @@ fn main() {
                     continue;
                 }
 
-                let difference = comparing::compare_right_edge_euclidean(&piece.image, &comparing_piece.image);
+                let difference = comparing::compare_right_edge_hue(&piece.image, &comparing_piece.image,comp_thresh);
                 if difference < min_diff {
                     min_index = comparing_piece.index;
                     min_diff = difference;
                 }
             }
-
+            println!("PIECE: {}, DIFF: {}", piece.file_name, min_diff);
             piece.right_neighbor = Some(min_index);
         }
         pieces_ro = pieces.clone();
@@ -100,7 +101,7 @@ fn main() {
                     let disputed_piece = &pieces_ro[contestant.0 as usize];
                     let contestant_piece = &pieces_ro[contestant.1 as usize];
 
-                    let difference = comparing::compare_right_edge_euclidean(&contestant_piece.image, &disputed_piece.image);
+                    let difference = comparing::compare_right_edge_hue(&contestant_piece.image, &disputed_piece.image,comp_thresh);
 
                     if difference < min_diff {
                         min_diff = difference;
@@ -150,7 +151,7 @@ fn main() {
                 solved_edge_idx += 1;
             }
 
-            let mut difference = comparing::compare_right_edge_euclidean(&piece.image, &solved_edge);
+            let mut difference = comparing::compare_right_edge_hue(&piece.image, &solved_edge,comp_thresh);
 
             //Matching
             //TODO: SCALE THRESHOLD
