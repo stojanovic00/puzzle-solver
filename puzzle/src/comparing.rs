@@ -1,5 +1,7 @@
 use image::{DynamicImage, GenericImageView, Rgba};
-use colors_transform::{Color, Rgb};
+use colors_transform::Color;
+
+
 
 // Compares right edge of img1 and left edge of img2 and returns difference
 pub fn compare_right_edge_abs(img1: &DynamicImage, img2: &DynamicImage, threshold: i32) -> u32{
@@ -92,7 +94,7 @@ fn euclidean_distance_rgba(p1: Rgba<u8>, p2: Rgba<u8>) -> f64 {
 
 
 pub fn compare_right_edge_hue(img1: &DynamicImage, img2: &DynamicImage, threshold: f32) -> u32{
-    let mut difference = 0;
+    let mut difference = 0.0;
 
     if img1.height() != img2.height(){
         return u32::MAX;
@@ -111,9 +113,7 @@ pub fn compare_right_edge_hue(img1: &DynamicImage, img2: &DynamicImage, threshol
 
 
         let hue_diff = (hue1 - hue2).abs();
-        if hue_diff > threshold{
-            difference += 1;
-        }
+        difference += hue_diff;
     }
 
 

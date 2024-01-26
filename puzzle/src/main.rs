@@ -1,21 +1,35 @@
+//TODO: remove when finished implementation
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 mod stitching;
 mod comparing;
 mod piece;
 
 use std::collections::HashSet;
-use image::{DynamicImage, GenericImage, GenericImageView, ImageResult};
-
+use std::env;
+use image::{DynamicImage, GenericImage, GenericImageView};
+use crate::piece::Piece;
 
 
 fn main() {
-    let solved_path = "solved/slika1.jpg";
+    //Loading data
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 2 {
+        eprintln!("Usage: {} <puzzle_folder_path> <solved_image_path>", args[0]);
+        std::process::exit(1);
+    }
+
+    let puzzle_folder_path = &args[1];
+    let solved_path = &args[2];
+
     let solved_image = image::open(solved_path).unwrap_or_else(|_| {
         eprintln!("Failed to open image: {:?}", solved_path);
         DynamicImage::new_rgba8(1, 1)
     });
 
-
-    let mut pieces = piece::load_images_from_folder("slika1");
+    let mut pieces = piece::load_images_from_folder(puzzle_folder_path);
     let mut pieces_ro = pieces.clone();
 
     //TESTING
@@ -37,99 +51,27 @@ fn main() {
    // return;
     //TESTING
 
+    //Pre process calculations
+
     let (common_width, common_height) = piece::find_most_common_dimensions(&pieces);
     let horizontal_pieces_num = solved_image.width() / common_width;
     let vertical_pieces_num = pieces.len() as u32 / horizontal_pieces_num;
 
-
+    //Processing
     loop {
         let all_indexes: Vec<usize> = (0..pieces.len()).collect();
         let taken_indexes: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
-
 
         if taken_indexes.len() == all_indexes.len() {
             break;
         }
 
-        //Choose right neighbors
-        for piece in &mut pieces {
-            if piece.right_neighbor != None {
-                continue;
-            }
+        assign_right_neighbors(&mut pieces, &mut pieces_ro, comp_thresh, taken_indexes);
 
-
-            let mut min_diff = u32::MAX;
-            //TODO check safer solution
-            let mut min_index = 0;
-
-            for comparing_piece in &pieces_ro {
-                if piece.index == comparing_piece.index || taken_indexes.contains(&comparing_piece.index) {
-                    continue;
-                }
-
-                let difference = comparing::compare_right_edge_hue(&piece.image, &comparing_piece.image,comp_thresh);
-                if difference < min_diff {
-                    min_index = comparing_piece.index;
-                    min_diff = difference;
-                }
-            }
-            println!("PIECE: {}, DIFF: {}", piece.file_name, min_diff);
-            piece.right_neighbor = Some(min_index);
-        }
-        pieces_ro = pieces.clone();
-
-        // REMOVING DOUBLE REFS
-
-        for piece_idx in 0..pieces.len() as u32 {
-            // .0 is idx of disputed piece, .1 is idx of piece that contains him as right neighbor
-            let mut contain_as_neighbor: Vec<(u32, u32)> = vec![];
-
-            for piece in &pieces_ro {
-                if let Some(right_neighbor) = piece.right_neighbor {
-                    if right_neighbor == piece_idx {
-                        contain_as_neighbor.push((piece_idx, piece.index));
-                    }
-                }
-            }
-
-            if (contain_as_neighbor.len() > 1) {
-                let mut min_diff = u32::MAX;
-                //TODO check safer solution
-                let mut min_idx = 0;
-
-                for contestant in &contain_as_neighbor {
-                    let disputed_piece = &pieces_ro[contestant.0 as usize];
-                    let contestant_piece = &pieces_ro[contestant.1 as usize];
-
-                    let difference = comparing::compare_right_edge_hue(&contestant_piece.image, &disputed_piece.image,comp_thresh);
-
-                    if difference < min_diff {
-                        min_diff = difference;
-                        min_idx = contestant.1;
-                    }
-                }
-
-                //Contestant with min diff gets disputed piece as right neighbors and others get None
-                let mut winner = &mut pieces[min_idx as usize];
-                winner.right_neighbor = Some(piece_idx);
-                pieces_ro = pieces.clone();
-
-                for contestant in &contain_as_neighbor {
-                    if contestant.1 == min_idx {
-                        continue;
-                    }
-                    let mut loser = &mut pieces[contestant.1 as usize];
-                    loser.right_neighbor = None;
-                    pieces_ro = pieces.clone();
-                }
-            }
-        }
-
-        //UPDATING RO
-        pieces_ro = pieces.clone();
+        resolve_neighboring_conflicts(&mut pieces, &mut pieces_ro, comp_thresh);
     }
 
-
+    //FINDING RIGHT EDGE PIECES
     let mut threshold = 0;
     loop {
     threshold += 100;
@@ -146,12 +88,12 @@ fn main() {
         for y_idx in 0..solved_image.height() - piece.image.height() + one_row_nly {
             let mut solved_edge_idx = 0;
             for y in y_idx..y_idx + piece.image.height() - 1 {
-                let mut pixel = solved_image.get_pixel(solved_image.width() - 1, y);
+                let pixel = solved_image.get_pixel(solved_image.width() - 1, y);
                 solved_edge.put_pixel(0, solved_edge_idx, pixel);
                 solved_edge_idx += 1;
             }
 
-            let mut difference = comparing::compare_right_edge_hue(&piece.image, &solved_edge,comp_thresh);
+            let difference = comparing::compare_right_edge_hue(&piece.image, &solved_edge,comp_thresh);
 
             //Matching
             //TODO: SCALE THRESHOLD
@@ -169,7 +111,7 @@ fn main() {
     pieces_ro = pieces.clone();
 
 
-    //Finding pieces that are on the left edge
+    //FINDING LEFT EDGE PIECES
 
     // Collect all unique indexes present in right_neighbor fields
     let indexes_in_right_neighbor: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
@@ -214,4 +156,95 @@ fn main() {
         file_counter += 1;
     }
 
+}
+
+
+
+
+
+fn resolve_neighboring_conflicts(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, comp_thresh: f32) {
+// REMOVING DOUBLE REFS
+
+    for piece_idx in 0..pieces.len() as u32 {
+        // .0 is idx of disputed piece, .1 is idx of piece that contains him as right neighbor
+        let mut contain_as_neighbor: Vec<(u32, u32)> = vec![];
+
+        for piece in &mut *pieces_ro {
+            if let Some(right_neighbor) = piece.right_neighbor {
+                if right_neighbor == piece_idx {
+                    contain_as_neighbor.push((piece_idx, piece.index));
+                }
+            }
+        }
+
+        if contain_as_neighbor.len() > 1 {
+            let mut min_diff = u32::MAX;
+            //TODO check safer solution
+            let mut min_idx = 0;
+
+            for contestant in &contain_as_neighbor {
+                let disputed_piece = &pieces_ro[contestant.0 as usize];
+                let contestant_piece = &pieces_ro[contestant.1 as usize];
+
+                let difference = comparing::compare_right_edge_hue(&contestant_piece.image, &disputed_piece.image, comp_thresh);
+
+                if difference < min_diff {
+                    min_diff = difference;
+                    min_idx = contestant.1;
+                }
+            }
+
+            //Contestant with min diff gets disputed piece as right neighbors and others get None
+            let winner = &mut pieces[min_idx as usize];
+            winner.right_neighbor = Some(piece_idx);
+            //UPDATING RO
+            *pieces_ro = pieces.clone();
+
+            for contestant in &contain_as_neighbor {
+                if contestant.1 == min_idx {
+                    continue;
+                }
+                let loser = &mut pieces[contestant.1 as usize];
+                loser.right_neighbor = None;
+                //UPDATING RO
+                *pieces_ro = pieces.clone();
+            }
+        }
+    }
+
+    //UPDATING RO
+    *pieces_ro = pieces.clone();
+}
+
+fn assign_right_neighbors(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, comp_thresh: f32, taken_indexes: HashSet<u32>) {
+    for piece in &mut *pieces {
+        if piece.right_neighbor != None {
+            continue;
+        }
+
+
+        let mut min_diff = u32::MAX;
+        //TODO check safer solution
+        let mut min_index = 0;
+
+        for comparing_piece in &mut *pieces_ro {
+            if piece.index == comparing_piece.index || taken_indexes.contains(&comparing_piece.index) {
+                continue;
+            }
+
+            let difference = comparing::compare_right_edge_hue(&piece.image, &comparing_piece.image, comp_thresh);
+            if difference < min_diff {
+                min_index = comparing_piece.index;
+                min_diff = difference;
+            }
+        }
+        println!("PIECE: {}, DIFF: {}", piece.file_name, min_diff);
+        piece.right_neighbor = Some(min_index);
+    }
+    *pieces_ro = pieces.clone();
+
+
+    for piece in pieces {
+        println!("{}", piece);
+    }
 }
