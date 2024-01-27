@@ -8,7 +8,7 @@ mod piece;
 
 use std::collections::HashSet;
 use std::env;
-use image::{DynamicImage, GenericImage, GenericImageView};
+use image::{DynamicImage};
 use crate::piece::Piece;
 
 
@@ -30,22 +30,23 @@ fn main() {
     });
 
     let mut pieces = piece::load_images_from_folder(puzzle_folder_path);
+    //UPDATING RO
     let mut pieces_ro = pieces.clone();
 
     //TESTING
 
-   //  let piece3 = &pieces[5];
-   //  let piece1 = &pieces[1];
-   //  let piece9 = &pieces[11];
+   //  let piece7 = &pieces[9];
+   //  let piece8 = &pieces[10];
+   //  let piece1 = &pieces[0];
    //  let edgy_image = DynamicImage::new_rgba8(1,10);
    //
-    let comp_thresh = 30.0;
-   //  let difference31 = comparing::compare_right_edge_hue(&piece3.image, &piece1.image, comp_thresh) as i32;
-   //  let difference19 = comparing::compare_right_edge_hue(&piece1.image, &piece9.image, comp_thresh) as i32;
+    let comp_thresh = 0.0;
+   //  let difference78 = comparing::compare_right_edge_hue(&piece7.image, &piece8.image, comp_thresh) as i32;
+   //  let difference81 = comparing::compare_right_edge_hue(&piece8.image, &piece1.image, comp_thresh) as i32;
    //
-   //  println!("DIFF 3 and 1: {}", difference31);
-   //  println!("DIFF 1 and 9: {}", difference19);
-   //  println!("DIFF19 - DIFF31: {}", difference19 - difference31);
+   //  println!("DIFF 7 and 8: {}", difference78);
+   //  println!("DIFF 8 and 1: {}", difference81);
+   //  println!("DIFF81 - DIFF78: {}", difference81 - difference78);
    //
    //
    // return;
@@ -71,45 +72,28 @@ fn main() {
         resolve_neighboring_conflicts(&mut pieces, &mut pieces_ro, comp_thresh);
     }
 
+
     //FINDING RIGHT EDGE PIECES
-    let mut threshold = 0;
-    loop {
-    threshold += 100;
-    //Finding right edge pieces
-    for piece in &pieces_ro {
-        // Slide across solved edge one pixel at at a time and compare
-        let mut solved_edge = DynamicImage::new_rgba8(1, piece.image.height());
+    let mut max_diff_idxs = vec![];
+    let mut sorted = pieces.clone();
 
-        let mut one_row_nly = 0;
-        if solved_image.height() - piece.image.height() == 0 {
-            one_row_nly = 1;
-        }
+    sorted.sort_by(|a, b| b.neighbor_diff.cmp(&a.neighbor_diff));
+    for i in 0..vertical_pieces_num{
+        max_diff_idxs.push(sorted[i as usize].index);
+    }
 
-        for y_idx in 0..solved_image.height() - piece.image.height() + one_row_nly {
-            let mut solved_edge_idx = 0;
-            for y in y_idx..y_idx + piece.image.height() - 1 {
-                let pixel = solved_image.get_pixel(solved_image.width() - 1, y);
-                solved_edge.put_pixel(0, solved_edge_idx, pixel);
-                solved_edge_idx += 1;
-            }
-
-            let difference = comparing::compare_right_edge_hue(&piece.image, &solved_edge,comp_thresh);
-
-            //Matching
-            //TODO: SCALE THRESHOLD
-            // KADA GA ISKLJUCIM ZA SLIKU 1-1 SMANJI BROJ NEREFERENCIRANIH ZA 8
-            //Threshold: each channel allowed deviation is 25
-            // let threshold = piece.image.height() * 75;
-            if difference < threshold {
-                pieces[piece.index as usize].right_neighbor = None;
-                break;
-            }
+    for piece in &mut pieces{
+        if max_diff_idxs.contains(&piece.index){
+            piece.right_neighbor = None;
         }
     }
 
     //UPDATING RO
-    pieces_ro = pieces.clone();
+    // pieces_ro = pieces.clone(); not necessary
 
+    for piece in &pieces{
+        println!("{}", piece);
+    }
 
     //FINDING LEFT EDGE PIECES
 
@@ -122,12 +106,7 @@ fn main() {
     // Find the difference to get indexes that are never in right_neighbor
     let unreferenced_indexes: HashSet<_> = all_indexes.difference(&indexes_in_right_neighbor).collect();
 
-    println!("UNREF NUM: {}", unreferenced_indexes.len());
-    if unreferenced_indexes.len() as u32 == vertical_pieces_num{
-        break;
-    }
 
-}
 
     //MERGING PIECES
     // Collect all unique indexes present in right_neighbor fields
@@ -238,13 +217,9 @@ fn assign_right_neighbors(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, c
                 min_diff = difference;
             }
         }
-        println!("PIECE: {}, DIFF: {}", piece.file_name, min_diff);
         piece.right_neighbor = Some(min_index);
+        piece.neighbor_diff = min_diff;
     }
+    //UPDATING RO
     *pieces_ro = pieces.clone();
-
-
-    for piece in pieces {
-        println!("{}", piece);
-    }
 }
