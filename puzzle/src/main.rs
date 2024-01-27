@@ -41,8 +41,8 @@ fn main() {
    //  let edgy_image = DynamicImage::new_rgba8(1,10);
    //
     let comp_thresh = 0.0;
-   //  let difference78 = comparing::compare_right_edge_hue(&piece7.image, &piece8.image, comp_thresh) as i32;
-   //  let difference81 = comparing::compare_right_edge_hue(&piece8.image, &piece1.image, comp_thresh) as i32;
+   //  let difference78 = comparing::compare_right_edge_delta_e(&piece7.image, &piece8.image, comp_thresh) as i32;
+   //  let difference81 = comparing::compare_right_edge_delta_e(&piece8.image, &piece1.image, comp_thresh) as i32;
    //
    //  println!("DIFF 7 and 8: {}", difference78);
    //  println!("DIFF 8 and 1: {}", difference81);

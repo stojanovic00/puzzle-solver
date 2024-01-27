@@ -119,3 +119,32 @@ pub fn compare_right_edge_hue(img1: &DynamicImage, img2: &DynamicImage, threshol
 
     return difference as u32
 }
+
+pub fn compare_right_edge_delta_e(img1: &DynamicImage, img2: &DynamicImage, threshold: f32) -> u32{
+    let mut difference = 0.0;
+
+    if img1.height() != img2.height(){
+        return u32::MAX;
+    }
+
+    for height_idx in 0..img1.height(){
+        // Right edge
+        let pixel1 = img1.get_pixel(img1.width() - 1, height_idx);
+        // Left edge
+        let pixel2 = img2.get_pixel(0, height_idx);
+
+        let pixel1_lab = lab::Lab::from_rgb(&[pixel1[0], pixel1[1], pixel1[2]]);
+        let pixel2_lab = lab::Lab::from_rgb(&[pixel2[0], pixel2[1], pixel2[2]]);
+
+
+        let delta_l = pixel2_lab.l - pixel1_lab.l;
+        let delta_a = pixel2_lab.a - pixel1_lab.a;
+        let delta_b = pixel2_lab.b - pixel1_lab.b;
+
+        let delta_e_diff = (delta_l.powi(2) + delta_a.powi(2) + delta_b.powi(2)).sqrt();
+        difference += delta_e_diff;
+    }
+
+
+    return difference as u32
+}
