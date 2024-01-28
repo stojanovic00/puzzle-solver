@@ -35,21 +35,24 @@ fn main() {
 
     //TESTING
 
-   //  let piece7 = &pieces[9];
-   //  let piece8 = &pieces[10];
-   //  let piece1 = &pieces[0];
-   //  let edgy_image = DynamicImage::new_rgba8(1,10);
-   //
+    let piece7 = &pieces[9];
+    let piece8 = &pieces[10];
+    let piece1 = &pieces[0];
+    let edgy_image = DynamicImage::new_rgba8(1,10);
+
     let comp_thresh = 0.0;
-   //  let difference78 = comparing::compare_right_edge_delta_e(&piece7.image, &piece8.image, comp_thresh) as i32;
-   //  let difference81 = comparing::compare_right_edge_delta_e(&piece8.image, &piece1.image, comp_thresh) as i32;
-   //
-   //  println!("DIFF 7 and 8: {}", difference78);
-   //  println!("DIFF 8 and 1: {}", difference81);
-   //  println!("DIFF81 - DIFF78: {}", difference81 - difference78);
-   //
-   //
-   // return;
+    let difference78 = comparing::compare_right_edge_hue(&piece7.image, &piece8.image, comp_thresh) as i32;
+    let difference81 = comparing::compare_right_edge_hue(&piece8.image, &piece1.image, comp_thresh) as i32;
+
+    println!("DIFF 7 and 8 RIGHT: {}", difference78);
+    println!("DIFF 8 and 1 RIGHT: {}", difference81);
+
+    let difference87_left = comparing::compare_left_edge_hue(&piece8.image, &piece7.image, comp_thresh) as i32;
+    let difference18_left = comparing::compare_left_edge_hue(&piece1.image, &piece8.image, comp_thresh) as i32;
+
+    println!("DIFF 7 and 8 LEFT: {}", difference87_left);
+    println!("DIFF 8 and 1 LEFT: {}", difference18_left);
+   return;
     //TESTING
 
     //Pre process calculations
