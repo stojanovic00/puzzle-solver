@@ -203,3 +203,26 @@ pub fn compare_pieces_rgb(img1: &DynamicImage, img2: &DynamicImage) -> u32{
 
     return difference as u32
 }
+
+pub fn compare_pieces_hsv(img1: &DynamicImage, img2: &DynamicImage) -> u32{
+    let mut difference = 0.0;
+
+    for x in 0..img1.width(){
+        for  y in 0..img1.height(){
+            let pixel1 = img1.get_pixel(x, y);
+            let pixel2 = img2.get_pixel(x, y);
+
+            let hue1 = colors_transform::Rgb::from(pixel1[0] as f32,pixel1[1] as f32,pixel1[2] as f32)
+                .to_hsl().get_hue();
+            let hue2 = colors_transform::Rgb::from(pixel2[0] as f32,pixel2[1] as f32,pixel2[2] as f32)
+                .to_hsl().get_hue();
+
+
+            let hue_diff = (hue1 - hue2).abs();
+            difference += hue_diff;
+        }
+    }
+
+
+    return difference as u32
+}
