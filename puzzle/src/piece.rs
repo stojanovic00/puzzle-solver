@@ -8,9 +8,11 @@ pub struct Piece{
     pub index: u32,
     pub image: DynamicImage,
     pub right_neighbor: Option<u32>,
+    pub left_neighbor: Option<u32>,
     pub bottom_neighbor: Option<u32>,
     pub file_name: String,
-    pub neighbor_diff: u32
+    pub right_neighbor_diff: u32,
+    pub left_neighbor_diff: u32
 }
 impl Piece{
     pub fn new(img: DynamicImage, idx: u32, filename: String) -> Self{
@@ -18,9 +20,11 @@ impl Piece{
             index : idx,
             image : img,
             right_neighbor : None,
+            left_neighbor : None,
             bottom_neighbor : None,
             file_name: filename,
-            neighbor_diff: u32::MAX
+            right_neighbor_diff: u32::MAX,
+            left_neighbor_diff: u32::MAX
 
         }
     }
@@ -30,8 +34,8 @@ impl fmt::Display for Piece {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Piece(index: {}, right_neighbor: {:?}, neighbor_diff {}, bottom_neighbor: {:?}, file: {})",
-            self.index,  self.right_neighbor, self.neighbor_diff, self.bottom_neighbor, self.file_name
+            "Piece(index: {}, right_neighbor: {:?}, right_neighbor_diff {}, left_neighbor: {:?}, left_neighbor_diff {} bottom_neighbor: {:?}, file: {})",
+            self.index, self.right_neighbor, self.right_neighbor_diff, self.left_neighbor, self.left_neighbor_diff, self.bottom_neighbor, self.file_name
         )
     }
 }
@@ -92,7 +96,7 @@ pub fn find_most_common_dimensions(pieces: &[Piece]) -> (u32, u32){
 
 impl PartialEq for Piece {
     fn eq(&self, other: &Self) -> bool {
-        self.neighbor_diff == other.neighbor_diff
+        self.right_neighbor_diff == other.right_neighbor_diff
     }
 }
 
@@ -100,13 +104,13 @@ impl Eq for Piece {}
 
 impl PartialOrd for Piece {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.neighbor_diff.partial_cmp(&other.neighbor_diff)
+        self.right_neighbor_diff.partial_cmp(&other.right_neighbor_diff)
     }
 }
 
 impl Ord for Piece {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.neighbor_diff.cmp(&other.neighbor_diff)
+        self.right_neighbor_diff.cmp(&other.right_neighbor_diff)
     }
 }
 

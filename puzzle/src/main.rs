@@ -33,115 +33,168 @@ fn main() {
     //UPDATING RO
     let mut pieces_ro = pieces.clone();
 
+
+     let comp_thresh = 0.0;
     //TESTING
 
-    let piece7 = &pieces[9];
-    let piece8 = &pieces[10];
-    let piece1 = &pieces[0];
-    let edgy_image = DynamicImage::new_rgba8(1,10);
-
-    let comp_thresh = 0.0;
-    let difference78 = comparing::compare_right_edge_hue(&piece7.image, &piece8.image, comp_thresh) as i32;
-    let difference81 = comparing::compare_right_edge_hue(&piece8.image, &piece1.image, comp_thresh) as i32;
-
-    println!("DIFF 7 and 8 RIGHT: {}", difference78);
-    println!("DIFF 8 and 1 RIGHT: {}", difference81);
-
-    let difference87_left = comparing::compare_left_edge_hue(&piece8.image, &piece7.image, comp_thresh) as i32;
-    let difference18_left = comparing::compare_left_edge_hue(&piece1.image, &piece8.image, comp_thresh) as i32;
-
-    println!("DIFF 7 and 8 LEFT: {}", difference87_left);
-    println!("DIFF 8 and 1 LEFT: {}", difference18_left);
-   return;
+   //  let piece7 = &pieces[9];
+   //  let piece8 = &pieces[10];
+   //  let piece1 = &pieces[0];
+   //  let edgy_image = DynamicImage::new_rgba8(1,10);
+   //
+   //  let difference78 = comparing::compare_right_edge_hue(&piece7.image, &piece8.image, comp_thresh) as i32;
+   //  let difference81 = comparing::compare_right_edge_hue(&piece8.image, &piece1.image, comp_thresh) as i32;
+   //
+   //  println!("DIFF 7 and 8 RIGHT: {}", difference78);
+   //  println!("DIFF 8 and 1 RIGHT: {}", difference81);
+   //
+   //  let difference87_left = comparing::compare_left_edge_hue(&piece8.image, &piece7.image, comp_thresh) as i32;
+   //  let difference18_left = comparing::compare_left_edge_hue(&piece1.image, &piece8.image, comp_thresh) as i32;
+   //
+   //  println!("DIFF 7 and 8 LEFT: {}", difference87_left);
+   //  println!("DIFF 8 and 1 LEFT: {}", difference18_left);
+   // return;
     //TESTING
 
     //Pre process calculations
 
     let (common_width, common_height) = piece::find_most_common_dimensions(&pieces);
     let horizontal_pieces_num = solved_image.width() / common_width;
-    let vertical_pieces_num = pieces.len() as u32 / horizontal_pieces_num;
+    let mut vertical_pieces_num = pieces.len() as u32 / horizontal_pieces_num;
 
-    //Processing
+    //PROCESSING
+    let mut iter_num = 0;
+    let mut merged_count;
+    loop {
+        (pieces, merged_count) = solve(&mut pieces, &mut pieces_ro, comp_thresh, horizontal_pieces_num, vertical_pieces_num, iter_num);
+        pieces_ro = pieces.clone();
+        vertical_pieces_num -= merged_count;
+        if pieces.len() == 0{
+            break;
+        }
+        iter_num += 1;
+    }
+}
+
+fn solve(mut pieces: &mut Vec<Piece>, mut pieces_ro: &mut Vec<Piece>, comp_thresh: f32, horizontal_pieces_num: u32, vertical_pieces_num: u32, iter_num: u32) -> (Vec<Piece>, u32) {
     loop {
         let all_indexes: Vec<usize> = (0..pieces.len()).collect();
-        let taken_indexes: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
+        let taken_right_indexes: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
+        let taken_left_indexes: HashSet<_> = pieces.iter().filter_map(|piece| piece.left_neighbor).collect();
 
-        if taken_indexes.len() == all_indexes.len() {
+        if taken_right_indexes.len() == all_indexes.len() - vertical_pieces_num as usize {
             break;
         }
 
-        assign_right_neighbors(&mut pieces, &mut pieces_ro, comp_thresh, taken_indexes);
+        assign_right_neighbors(&mut pieces, &mut pieces_ro, comp_thresh, &taken_right_indexes);
+        assign_left_neighbors(&mut pieces, &mut pieces_ro, comp_thresh, &taken_left_indexes);
 
-        resolve_neighboring_conflicts(&mut pieces, &mut pieces_ro, comp_thresh);
-    }
+        rm_right_neighbors_from_righ_edge_pieces(&mut pieces, vertical_pieces_num);
 
-
-    //FINDING RIGHT EDGE PIECES
-    let mut max_diff_idxs = vec![];
-    let mut sorted = pieces.clone();
-
-    sorted.sort_by(|a, b| b.neighbor_diff.cmp(&a.neighbor_diff));
-    for i in 0..vertical_pieces_num{
-        max_diff_idxs.push(sorted[i as usize].index);
-    }
-
-    for piece in &mut pieces{
-        if max_diff_idxs.contains(&piece.index){
-            piece.right_neighbor = None;
+        for piece in & *pieces{
+           println!("{}", piece) ;
         }
-    }
 
-    //UPDATING RO
-    // pieces_ro = pieces.clone(); not necessary
-
-    for piece in &pieces{
-        println!("{}", piece);
+        filter_not_best_buddies_right(&mut pieces, &mut pieces_ro, comp_thresh);
+        filter_not_best_buddies_left(&mut pieces, &mut pieces_ro, comp_thresh);
     }
 
     //FINDING LEFT EDGE PIECES
-
-    // Collect all unique indexes present in right_neighbor fields
-    let indexes_in_right_neighbor: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
-
-    // Create a set of all indexes
-    let all_indexes: HashSet<_> = pieces.iter().map(|piece| piece.index).collect();
-
-    // Find the difference to get indexes that are never in right_neighbor
-    let unreferenced_indexes: HashSet<_> = all_indexes.difference(&indexes_in_right_neighbor).collect();
+    let unreferenced_indexes = find_unreferenced_indexes(&mut pieces);
 
 
+    let (used_pieces, merged_count) = merge_pieces(&mut pieces, horizontal_pieces_num, unreferenced_indexes, iter_num);
 
-    //MERGING PIECES
-    // Collect all unique indexes present in right_neighbor fields
-    let indexes_in_right_neighbor: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
+    let mut unused_pieces: Vec<Piece> = vec![];
+    let mut idx_counter = 0;
+    for piece in & *pieces {
+        if !used_pieces.contains(&piece.index) {
+            let mut refreshed_piece = piece.clone();
 
-    // Create a set of all indexes
-    let all_indexes: HashSet<_> = pieces.iter().map(|piece| piece.index).collect();
+            refreshed_piece.index = idx_counter;
+            refreshed_piece.right_neighbor = None;
+            refreshed_piece.right_neighbor_diff = u32::MAX;
 
-    // Find the difference to get indexes that are never in right_neighbor
-    let unreferenced_indexes: HashSet<_> = all_indexes.difference(&indexes_in_right_neighbor).collect();
+            refreshed_piece.left_neighbor = None;
+            refreshed_piece.left_neighbor_diff = u32::MAX;
 
-
-    //Merge all images that are in same horizontal line
-    let mut file_counter = 0;
-    for unref_idx in unreferenced_indexes{
-       let start_piece = &pieces[*unref_idx as usize];
-       let mut neighbor_piece = &pieces[start_piece.right_neighbor.unwrap() as usize];
-
-        let mut result_image = stitching::stitch_right(&start_piece.image, &neighbor_piece.image, 0);
-        for i in 0..horizontal_pieces_num -2{
-            neighbor_piece = &pieces[neighbor_piece.right_neighbor.unwrap() as usize];
-            result_image = stitching::stitch_right(&result_image, &neighbor_piece.image, 0);
+            unused_pieces.push(refreshed_piece);
+            idx_counter += 1;
         }
-        let file_path = format!("horizontals/horizontal_{}.jpg", file_counter);
-        result_image.save(file_path).expect("WRITING IMAGE FAILED");
-        file_counter += 1;
     }
-
+    (unused_pieces, merged_count)
 }
 
+fn merge_pieces(pieces: &mut Vec<Piece>, horizontal_pieces_num: u32, unreferenced_indexes: HashSet<u32>, iter_num: u32) -> (Vec<u32>,u32) {
+    let mut used_pieces: Vec<u32> = vec![];
+    //Merge all images that are in same horizontal line
+    let mut file_counter = 0;
+    for unref_idx in unreferenced_indexes {
+        let mut locally_used_pieces: Vec<u32> = vec![];
+        let start_piece = &pieces[unref_idx as usize];
+        locally_used_pieces.push(unref_idx);
 
 
+        if start_piece.right_neighbor.is_none() {
+            continue;
+        }
+        let neighbor_piece_idx = start_piece.right_neighbor.unwrap();
+        let mut neighbor_piece = &pieces[neighbor_piece_idx as usize];
+        locally_used_pieces.push(neighbor_piece_idx);
+
+        let mut result_image = stitching::stitch_right(&start_piece.image, &neighbor_piece.image, 0);
+        let mut failed_merging = false;
+        for i in 0..horizontal_pieces_num - 2 {
+            if neighbor_piece.right_neighbor.is_none() {
+                failed_merging = true;
+                break;
+            }
+            let neighbor_piece_idx = neighbor_piece.right_neighbor.unwrap();
+            neighbor_piece = &pieces[neighbor_piece_idx as usize];
+            result_image = stitching::stitch_right(&result_image, &neighbor_piece.image, 0);
+            locally_used_pieces.push(neighbor_piece_idx)
+        }
+        if failed_merging {
+            continue;
+        }
+        let file_path = format!("horizontals/horizontal_{}_{}.jpg", iter_num, file_counter);
+        result_image.save(file_path).expect("WRITING IMAGE FAILED");
+        file_counter += 1;
+        //Register what is used
+        for idx in locally_used_pieces {
+            used_pieces.push(idx);
+        }
+    }
+
+    (used_pieces, file_counter)
+}
+
+fn rm_right_neighbors_from_righ_edge_pieces(pieces: &mut Vec<Piece>, vertical_pieces_num: u32) {
+    let mut max_diff_idxs = vec![];
+    let mut sorted = pieces.clone();
+
+    sorted.sort_by(|a, b| b.right_neighbor_diff.cmp(&a.right_neighbor_diff));
+    for i in 0..vertical_pieces_num {
+        max_diff_idxs.push(sorted[i as usize].index);
+    }
+
+    for piece in &mut *pieces {
+        if max_diff_idxs.contains(&piece.index) {
+            piece.right_neighbor = None;
+        }
+    }
+}
+
+fn find_unreferenced_indexes(pieces: &mut Vec<Piece>) -> HashSet<u32> {
+    let indexes_in_right_neighbor: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
+
+    let all_indexes: HashSet<_> = pieces.iter().map(|piece| piece.index).collect();
+
+    // Find the difference to get indexes that are never in right_neighbor
+    let unreferenced_indexes: HashSet<_> = all_indexes.difference(&indexes_in_right_neighbor).cloned().collect();
+
+    unreferenced_indexes
+}
 
 
 fn resolve_neighboring_conflicts(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, comp_thresh: f32) {
@@ -198,9 +251,52 @@ fn resolve_neighboring_conflicts(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Pi
     *pieces_ro = pieces.clone();
 }
 
-fn assign_right_neighbors(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, comp_thresh: f32, taken_indexes: HashSet<u32>) {
+fn filter_not_best_buddies_right(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, comp_thresh: f32) {
+    for piece in &mut *pieces{
+
+       if let Some(right_neighbor_idx) = piece.right_neighbor{
+            let right_neighbor = pieces_ro.get(right_neighbor_idx as usize).unwrap();
+
+           if let Some(right_neighbors_left_neighbor) = right_neighbor.left_neighbor{
+               if right_neighbors_left_neighbor != piece.index{
+                   piece.right_neighbor = None;
+               }
+           }
+           else {
+               piece.right_neighbor = None;
+           }
+
+       }
+    }
+    // UPDATING RO
+    *pieces_ro = pieces.clone();
+}
+
+
+fn filter_not_best_buddies_left(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, comp_thresh: f32) {
+    for piece in &mut *pieces{
+
+        if let Some(left_neighbor_idx) = piece.left_neighbor{
+            let left_neighbor = pieces_ro.get(left_neighbor_idx as usize).unwrap();
+
+            if let Some(left_neighbors_right_neighbor) = left_neighbor.right_neighbor{
+                if left_neighbors_right_neighbor != piece.index{
+                    piece.left_neighbor = None;
+                }
+            } else {
+                piece.left_neighbor = None;
+            }
+
+        }
+    }
+    // UPDATING RO
+    *pieces_ro = pieces.clone();
+}
+
+
+fn assign_right_neighbors(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, comp_thresh: f32, taken_indexes: &HashSet<u32>) {
     for piece in &mut *pieces {
-        if piece.right_neighbor != None {
+        if piece.right_neighbor != None{
             continue;
         }
 
@@ -221,7 +317,35 @@ fn assign_right_neighbors(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, c
             }
         }
         piece.right_neighbor = Some(min_index);
-        piece.neighbor_diff = min_diff;
+        piece.right_neighbor_diff = min_diff;
+    }
+    //UPDATING RO
+    *pieces_ro = pieces.clone();
+}
+fn assign_left_neighbors(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, comp_thresh: f32, taken_indexes: &HashSet<u32>) {
+    for piece in &mut *pieces {
+        if piece.left_neighbor != None{
+            continue;
+        }
+
+
+        let mut min_diff = u32::MAX;
+        //TODO check safer solution
+        let mut min_index = 0;
+
+        for comparing_piece in &mut *pieces_ro {
+            if piece.index == comparing_piece.index || taken_indexes.contains(&comparing_piece.index) {
+                continue;
+            }
+
+            let difference = comparing::compare_left_edge_hue(&piece.image, &comparing_piece.image, comp_thresh);
+            if difference < min_diff {
+                min_index = comparing_piece.index;
+                min_diff = difference;
+            }
+        }
+        piece.left_neighbor = Some(min_index);
+        piece.left_neighbor_diff = min_diff;
     }
     //UPDATING RO
     *pieces_ro = pieces.clone();
