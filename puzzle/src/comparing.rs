@@ -178,3 +178,28 @@ pub fn compare_left_edge_hue(img1: &DynamicImage, img2: &DynamicImage, threshold
 
     return difference as u32
 }
+
+
+
+// WHOLE PIECES
+pub fn compare_pieces_rgb(img1: &DynamicImage, img2: &DynamicImage) -> u32{
+    let mut difference = 0;
+
+    for x in 0..img1.width(){
+        for  y in 0..img1.height(){
+            let pixel1 = img1.get_pixel(x, y);
+            let pixel2 = img2.get_pixel(x, y);
+
+            let mut pixel_diff = 0;
+            for channel_idx in 0..4{
+                let mut  channel_diff = pixel1[channel_idx] as i32 - pixel2[channel_idx] as i32;
+                channel_diff = channel_diff.abs();
+                    pixel_diff += channel_diff;
+            }
+            difference += pixel_diff;
+        }
+    }
+
+
+    return difference as u32
+}

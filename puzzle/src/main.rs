@@ -8,7 +8,7 @@ mod piece;
 
 use std::collections::HashSet;
 use std::env;
-use image::{DynamicImage};
+use image::{DynamicImage, GenericImage, GenericImageView};
 use crate::piece::Piece;
 
 
@@ -30,199 +30,149 @@ fn main() {
     });
 
     let mut pieces = piece::load_images_from_folder(puzzle_folder_path);
-    //UPDATING RO
-    let mut pieces_ro = pieces.clone();
 
-    //TESTING
+    let (usual_width, usual_height) = piece::find_most_common_dimensions(&pieces);
 
-    let piece7 = &pieces[9];
-    let piece8 = &pieces[10];
-    let piece1 = &pieces[0];
-    let edgy_image = DynamicImage::new_rgba8(1,10);
+    let horizontal_pieces_num =  solved_image.width() / usual_width;
+    let vertical_pieces_num =  solved_image.height() / usual_height;
 
-    let comp_thresh = 0.0;
-    let difference78 = comparing::compare_right_edge_hue(&piece7.image, &piece8.image, comp_thresh) as i32;
-    let difference81 = comparing::compare_right_edge_hue(&piece8.image, &piece1.image, comp_thresh) as i32;
-
-    println!("DIFF 7 and 8 RIGHT: {}", difference78);
-    println!("DIFF 8 and 1 RIGHT: {}", difference81);
-
-    let difference87_left = comparing::compare_left_edge_hue(&piece8.image, &piece7.image, comp_thresh) as i32;
-    let difference18_left = comparing::compare_left_edge_hue(&piece1.image, &piece8.image, comp_thresh) as i32;
-
-    println!("DIFF 7 and 8 LEFT: {}", difference87_left);
-    println!("DIFF 8 and 1 LEFT: {}", difference18_left);
-   return;
-    //TESTING
-
-    //Pre process calculations
-
-    let (common_width, common_height) = piece::find_most_common_dimensions(&pieces);
-    let horizontal_pieces_num = solved_image.width() / common_width;
-    let vertical_pieces_num = pieces.len() as u32 / horizontal_pieces_num;
-
-    //Processing
-    loop {
-        let all_indexes: Vec<usize> = (0..pieces.len()).collect();
-        let taken_indexes: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
-
-        if taken_indexes.len() == all_indexes.len() {
-            break;
-        }
-
-        assign_right_neighbors(&mut pieces, &mut pieces_ro, comp_thresh, taken_indexes);
-
-        resolve_neighboring_conflicts(&mut pieces, &mut pieces_ro, comp_thresh);
-    }
-
-
-    //FINDING RIGHT EDGE PIECES
-    let mut max_diff_idxs = vec![];
-    let mut sorted = pieces.clone();
-
-    sorted.sort_by(|a, b| b.neighbor_diff.cmp(&a.neighbor_diff));
-    for i in 0..vertical_pieces_num{
-        max_diff_idxs.push(sorted[i as usize].index);
-    }
+    println!("Dims: {}x{}", usual_width, usual_height);
+    println!("Horizontal pieces: {} Vertical pieces {}", horizontal_pieces_num, vertical_pieces_num);
 
     for piece in &mut pieces{
-        if max_diff_idxs.contains(&piece.index){
-            piece.right_neighbor = None;
-        }
-    }
 
-    //UPDATING RO
-    // pieces_ro = pieces.clone(); not necessary
+        // min diff, x , y
+        let mut min_info = (u32::MAX, 0, 0);
 
-    for piece in &pieces{
-        println!("{}", piece);
-    }
+       if piece.image.width() != usual_width &&  piece.image.height() != usual_height{
+           piece.x = Some(horizontal_pieces_num -1);
+           piece.y = Some(vertical_pieces_num -1);
+          continue;
+       }
 
-    //FINDING LEFT EDGE PIECES
+        //FAR RIGHT COLUMN
+        if piece.image.width() != usual_width{
+            let width = solved_image.width() -  (horizontal_pieces_num - 1) * usual_width;
 
-    // Collect all unique indexes present in right_neighbor fields
-    let indexes_in_right_neighbor: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
-
-    // Create a set of all indexes
-    let all_indexes: HashSet<_> = pieces.iter().map(|piece| piece.index).collect();
-
-    // Find the difference to get indexes that are never in right_neighbor
-    let unreferenced_indexes: HashSet<_> = all_indexes.difference(&indexes_in_right_neighbor).collect();
-
-
-
-    //MERGING PIECES
-    // Collect all unique indexes present in right_neighbor fields
-    let indexes_in_right_neighbor: HashSet<_> = pieces.iter().filter_map(|piece| piece.right_neighbor).collect();
-
-    // Create a set of all indexes
-    let all_indexes: HashSet<_> = pieces.iter().map(|piece| piece.index).collect();
-
-    // Find the difference to get indexes that are never in right_neighbor
-    let unreferenced_indexes: HashSet<_> = all_indexes.difference(&indexes_in_right_neighbor).collect();
-
-
-    //Merge all images that are in same horizontal line
-    let mut file_counter = 0;
-    for unref_idx in unreferenced_indexes{
-       let start_piece = &pieces[*unref_idx as usize];
-       let mut neighbor_piece = &pieces[start_piece.right_neighbor.unwrap() as usize];
-
-        let mut result_image = stitching::stitch_right(&start_piece.image, &neighbor_piece.image, 0);
-        for i in 0..horizontal_pieces_num -2{
-            neighbor_piece = &pieces[neighbor_piece.right_neighbor.unwrap() as usize];
-            result_image = stitching::stitch_right(&result_image, &neighbor_piece.image, 0);
-        }
-        let file_path = format!("horizontals/horizontal_{}.jpg", file_counter);
-        result_image.save(file_path).expect("WRITING IMAGE FAILED");
-        file_counter += 1;
-    }
-
-}
-
-
-
-
-
-fn resolve_neighboring_conflicts(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, comp_thresh: f32) {
-// REMOVING DOUBLE REFS
-
-    for piece_idx in 0..pieces.len() as u32 {
-        // .0 is idx of disputed piece, .1 is idx of piece that contains him as right neighbor
-        let mut contain_as_neighbor: Vec<(u32, u32)> = vec![];
-
-        for piece in &mut *pieces_ro {
-            if let Some(right_neighbor) = piece.right_neighbor {
-                if right_neighbor == piece_idx {
-                    contain_as_neighbor.push((piece_idx, piece.index));
+            let mut y_cursor = 0;
+            loop {
+                if y_cursor == (vertical_pieces_num - 1) * usual_height{
+                    break;
                 }
-            }
-        }
 
-        if contain_as_neighbor.len() > 1 {
-            let mut min_diff = u32::MAX;
-            //TODO check safer solution
-            let mut min_idx = 0;
-
-            for contestant in &contain_as_neighbor {
-                let disputed_piece = &pieces_ro[contestant.0 as usize];
-                let contestant_piece = &pieces_ro[contestant.1 as usize];
-
-                let difference = comparing::compare_right_edge_hue(&contestant_piece.image, &disputed_piece.image, comp_thresh);
-
-                if difference < min_diff {
-                    min_diff = difference;
-                    min_idx = contestant.1;
+                //Cut image from solved image
+                let mut original_piece = DynamicImage::new_rgba8(width, usual_height);
+                for src_x in 0..width{
+                    for src_y in 0..usual_height{
+                        let pixel  = solved_image.get_pixel((horizontal_pieces_num - 1) * usual_width + src_x, y_cursor + src_y);
+                        original_piece.put_pixel(src_x, src_y, pixel);
+                    }
                 }
+
+                //Compare
+                let diff = comparing::compare_pieces_rgb(&piece.image, &original_piece);
+                if diff < min_info.0{
+                    min_info.0 =  diff;
+                    min_info.1 = horizontal_pieces_num - 1;
+                    min_info.2 = y_cursor / usual_height;
+                }
+
+                y_cursor += usual_height;
             }
 
-            //Contestant with min diff gets disputed piece as right neighbors and others get None
-            let winner = &mut pieces[min_idx as usize];
-            winner.right_neighbor = Some(piece_idx);
-            //UPDATING RO
-            *pieces_ro = pieces.clone();
+            //Assign minimal
+            piece.x = Some(min_info.1);
+            piece.y = Some(min_info.2);
 
-            for contestant in &contain_as_neighbor {
-                if contestant.1 == min_idx {
-                    continue;
-                }
-                let loser = &mut pieces[contestant.1 as usize];
-                loser.right_neighbor = None;
-                //UPDATING RO
-                *pieces_ro = pieces.clone();
-            }
+
+            continue;
         }
-    }
 
-    //UPDATING RO
-    *pieces_ro = pieces.clone();
-}
+        //BOTTOM ROW
+        if piece.image.height() != usual_height{
+            let height = solved_image.height() -  (vertical_pieces_num - 1) * usual_height;
 
-fn assign_right_neighbors(pieces: &mut Vec<Piece>, pieces_ro: &mut Vec<Piece>, comp_thresh: f32, taken_indexes: HashSet<u32>) {
-    for piece in &mut *pieces {
-        if piece.right_neighbor != None {
+            let mut x_cursor = 0;
+            loop {
+                if x_cursor == (horizontal_pieces_num - 1) * usual_width{
+                    break;
+                }
+
+                //Cut image from solved image
+                let mut original_piece = DynamicImage::new_rgba8(usual_width, height);
+                for src_x in 0..usual_width{
+                    for src_y in 0..height{
+                        let pixel  = solved_image.get_pixel(x_cursor + src_x, (vertical_pieces_num - 1) * usual_height + src_y);
+                        original_piece.put_pixel(src_x, src_y, pixel);
+                    }
+                }
+
+                //Compare
+                let diff = comparing::compare_pieces_rgb(&piece.image, &original_piece);
+                if diff < min_info.0{
+                    min_info.0 =  diff;
+                    min_info.1 = x_cursor / usual_width;
+                    min_info.2 = vertical_pieces_num - 1;
+                }
+
+                x_cursor += usual_width;
+            }
+
+            //Assign minimal
+            piece.x = Some(min_info.1);
+            piece.y = Some(min_info.2);
+
+
             continue;
         }
 
 
-        let mut min_diff = u32::MAX;
-        //TODO check safer solution
-        let mut min_index = 0;
-
-        for comparing_piece in &mut *pieces_ro {
-            if piece.index == comparing_piece.index || taken_indexes.contains(&comparing_piece.index) {
-                continue;
+        let mut x_cursor = 0;
+        loop{
+            if x_cursor == (horizontal_pieces_num - 1) * usual_width{
+                break;
             }
 
-            let difference = comparing::compare_right_edge_hue(&piece.image, &comparing_piece.image, comp_thresh);
-            if difference < min_diff {
-                min_index = comparing_piece.index;
-                min_diff = difference;
+            let mut y_cursor = 0;
+            loop {
+                if y_cursor == (vertical_pieces_num - 1) * usual_height{
+                    break;
+                }
+
+                //Cut image from solved image
+                let mut original_piece = DynamicImage::new_rgba8(usual_width, usual_height);
+                for src_x in 0..usual_width{
+                    for src_y in 0..usual_height{
+                        let pixel  = solved_image.get_pixel(x_cursor + src_x, y_cursor + src_y);
+                        original_piece.put_pixel(src_x, src_y, pixel);
+                    }
+                }
+
+                //Compare
+                let diff = comparing::compare_pieces_rgb(&piece.image, &original_piece);
+                if diff < min_info.0{
+                    min_info.0 =  diff;
+                    min_info.1 = x_cursor / usual_width;
+                    min_info.2 = y_cursor / usual_height;
+                }
+
+                y_cursor += usual_height;
             }
+            x_cursor += usual_width;
         }
-        piece.right_neighbor = Some(min_index);
-        piece.neighbor_diff = min_diff;
+
+        //Assign minimal
+        piece.x = Some(min_info.1);
+        piece.y = Some(min_info.2);
     }
-    //UPDATING RO
-    *pieces_ro = pieces.clone();
+
+    for piece in pieces{
+       println!("{}", piece);
+    }
 }
+
+
+
+
+
+

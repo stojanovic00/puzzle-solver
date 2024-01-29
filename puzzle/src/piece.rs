@@ -7,21 +7,18 @@ use image::DynamicImage;
 pub struct Piece{
     pub index: u32,
     pub image: DynamicImage,
-    pub right_neighbor: Option<u32>,
-    pub bottom_neighbor: Option<u32>,
     pub file_name: String,
-    pub neighbor_diff: u32
+    pub x: Option<u32>,
+    pub y: Option<u32>
 }
 impl Piece{
     pub fn new(img: DynamicImage, idx: u32, filename: String) -> Self{
         Self{
             index : idx,
             image : img,
-            right_neighbor : None,
-            bottom_neighbor : None,
             file_name: filename,
-            neighbor_diff: u32::MAX
-
+            x : None,
+            y: None
         }
     }
 }
@@ -30,8 +27,8 @@ impl fmt::Display for Piece {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Piece(index: {}, right_neighbor: {:?}, neighbor_diff {}, bottom_neighbor: {:?}, file: {})",
-            self.index,  self.right_neighbor, self.neighbor_diff, self.bottom_neighbor, self.file_name
+            "Piece(index: {}, x:{:?}, y:{:?}, file: {})",
+            self.index,  self.x, self.y, self.file_name
         )
     }
 }
@@ -87,41 +84,3 @@ pub fn find_most_common_dimensions(pieces: &[Piece]) -> (u32, u32){
 
     most_common_dimensions.unwrap()
 }
-
-
-
-impl PartialEq for Piece {
-    fn eq(&self, other: &Self) -> bool {
-        self.neighbor_diff == other.neighbor_diff
-    }
-}
-
-impl Eq for Piece {}
-
-impl PartialOrd for Piece {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.neighbor_diff.partial_cmp(&other.neighbor_diff)
-    }
-}
-
-impl Ord for Piece {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.neighbor_diff.cmp(&other.neighbor_diff)
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
