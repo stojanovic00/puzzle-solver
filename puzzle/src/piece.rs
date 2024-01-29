@@ -9,7 +9,8 @@ pub struct Piece{
     pub image: DynamicImage,
     pub file_name: String,
     pub x: Option<u32>,
-    pub y: Option<u32>
+    pub y: Option<u32>,
+    pub diff: u32
 }
 impl Piece{
     pub fn new(img: DynamicImage, idx: u32, filename: String) -> Self{
@@ -18,7 +19,8 @@ impl Piece{
             image : img,
             file_name: filename,
             x : None,
-            y: None
+            y: None,
+            diff: u32::MAX
         }
     }
 }

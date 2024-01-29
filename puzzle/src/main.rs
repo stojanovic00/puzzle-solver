@@ -6,6 +6,7 @@ mod stitching;
 mod comparing;
 mod piece;
 
+use std::cmp::min;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use image::{DynamicImage, GenericImage, GenericImageView};
@@ -41,6 +42,8 @@ fn main() {
 
     index_uneven_pieces(solved_image, &mut pieces, usual_width, usual_height, horizontal_pieces_num, vertical_pieces_num);
 
+    resolve_duplicates(&mut pieces, horizontal_pieces_num, vertical_pieces_num);
+
     //MERGING
 
     // Create a HashMap to group pieces by their y values
@@ -54,6 +57,10 @@ fn main() {
     // Sort each vector by x value
     for (_, piece_group) in y_groups.iter_mut() {
         piece_group.sort_by_key(|piece| piece.x.unwrap_or_default());
+    }
+
+    for (key, piece_group) in y_groups.iter_mut() {
+        println!("{}: {}",key.unwrap(), piece_group.len());
     }
 
     // Create horizontal images
@@ -70,6 +77,7 @@ fn main() {
             x: Some(0),
             y: Some(y_value.unwrap()),
             file_name: "temp".to_string(),
+            diff: 0
         };
         horizontal_pieces.push(horizontal_piece);
     }
@@ -83,6 +91,39 @@ fn main() {
     }
 
     solved_image.save("FINAL.jpg").expect("Failed to save final image.");
+}
+
+fn resolve_duplicates(pieces: &mut Vec<Piece>, horizontal_pieces_num: u32, vertical_pieces_num: u32) {
+    for x in 0..horizontal_pieces_num {
+        for y in 0..vertical_pieces_num {
+            let mut has_coordinates: Vec<u32> = vec![];
+
+            for piece in & *pieces {
+                if piece.x.unwrap() == x && piece.y.unwrap() == y {
+                    has_coordinates.push(piece.index);
+                }
+            }
+
+            if has_coordinates.len() > 1 {
+                //diff and idx
+                let mut min_info = (u32::MAX, 0);
+                for idx in &has_coordinates {
+                    let piece = &pieces[*idx as usize];
+                    if piece.diff < min_info.0 {
+                        min_info.0 = piece.diff;
+                        min_info.1 = piece.index;
+                    }
+                }
+                for idx in &has_coordinates {
+                    let piece = &mut pieces[*idx as usize];
+                    if piece.index != min_info.1 {
+                        piece.x = Some(1476);
+                        piece.y = Some(1476);
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn index_uneven_pieces(solved_image: DynamicImage, pieces: &mut Vec<Piece>, usual_width: u32, usual_height: u32, horizontal_pieces_num: u32, vertical_pieces_num: u32) {
@@ -130,7 +171,7 @@ fn index_uneven_pieces(solved_image: DynamicImage, pieces: &mut Vec<Piece>, usua
             //Assign minimal
             piece.x = Some(min_info.1);
             piece.y = Some(min_info.2);
-
+            piece.diff = min_info.0;
 
             continue;
         }
