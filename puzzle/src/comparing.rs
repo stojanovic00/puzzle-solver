@@ -207,6 +207,10 @@ pub fn compare_pieces_rgb(img1: &DynamicImage, img2: &DynamicImage) -> u32{
 pub fn compare_pieces_hsv(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0.0;
 
+    if img1.height() != img2.height() || img1.width() != img2.width(){
+        return u32::MAX;
+    }
+
     for x in 0..img1.width(){
         for  y in 0..img1.height(){
             let pixel1 = img1.get_pixel(x, y);

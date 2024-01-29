@@ -9,7 +9,7 @@ mod piece;
 use std::cmp::min;
 use std::collections::{HashMap, HashSet};
 use std::env;
-use image::{DynamicImage, GenericImage, GenericImageView};
+use image::{DynamicImage, GenericImage, GenericImageView, open};
 use crate::piece::Piece;
 
 
@@ -40,10 +40,11 @@ fn main() {
     println!("Dims: {}x{}", usual_width, usual_height);
     println!("Horizontal pieces: {} Vertical pieces {}", horizontal_pieces_num, vertical_pieces_num);
 
-    index_uneven_pieces(solved_image, &mut pieces, usual_width, usual_height, horizontal_pieces_num, vertical_pieces_num);
+    index_pieces(solved_image, &mut pieces, usual_width, usual_height, horizontal_pieces_num, vertical_pieces_num);
 
-    resolve_duplicates(&mut pieces, horizontal_pieces_num, vertical_pieces_num);
-
+    for piece in &pieces{
+        println!("{}", piece);
+    }
     //MERGING
 
     // Create a HashMap to group pieces by their y values
@@ -93,166 +94,155 @@ fn main() {
     solved_image.save("FINAL.jpg").expect("Failed to save final image.");
 }
 
-fn resolve_duplicates(pieces: &mut Vec<Piece>, horizontal_pieces_num: u32, vertical_pieces_num: u32) {
-    for x in 0..horizontal_pieces_num {
-        for y in 0..vertical_pieces_num {
-            let mut has_coordinates: Vec<u32> = vec![];
 
-            for piece in & *pieces {
-                if piece.x.unwrap() == x && piece.y.unwrap() == y {
-                    has_coordinates.push(piece.index);
-                }
-            }
-
-            if has_coordinates.len() > 1 {
-                //diff and idx
-                let mut min_info = (u32::MAX, 0);
-                for idx in &has_coordinates {
-                    let piece = &pieces[*idx as usize];
-                    if piece.diff < min_info.0 {
-                        min_info.0 = piece.diff;
-                        min_info.1 = piece.index;
-                    }
-                }
-                for idx in &has_coordinates {
-                    let piece = &mut pieces[*idx as usize];
-                    if piece.index != min_info.1 {
-                        piece.x = Some(1476);
-                        piece.y = Some(1476);
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn index_uneven_pieces(solved_image: DynamicImage, pieces: &mut Vec<Piece>, usual_width: u32, usual_height: u32, horizontal_pieces_num: u32, vertical_pieces_num: u32) {
-    for piece in &mut *pieces {
-
-        // min diff, x , y
-        let mut min_info = (u32::MAX, 0, 0);
-
-        if piece.image.width() != usual_width && piece.image.height() != usual_height {
-            piece.x = Some(horizontal_pieces_num - 1);
-            piece.y = Some(vertical_pieces_num - 1);
-            continue;
-        }
-
-        //FAR RIGHT COLUMN
-        if piece.image.width() != usual_width {
-            let width = solved_image.width() - (horizontal_pieces_num - 1) * usual_width;
-
-            let mut y_cursor = 0;
-            loop {
-                if y_cursor == (vertical_pieces_num - 1) * usual_height {
-                    break;
-                }
-
-                //Cut image from solved image
-                let mut original_piece = DynamicImage::new_rgba8(width, usual_height);
-                for src_x in 0..width {
-                    for src_y in 0..usual_height {
-                        let pixel = solved_image.get_pixel((horizontal_pieces_num - 1) * usual_width + src_x, y_cursor + src_y);
-                        original_piece.put_pixel(src_x, src_y, pixel);
-                    }
-                }
-
-                //Compare
-                let diff = comparing::compare_pieces_hsv(&piece.image, &original_piece);
-                if diff < min_info.0 {
-                    min_info.0 = diff;
-                    min_info.1 = horizontal_pieces_num - 1;
-                    min_info.2 = y_cursor / usual_height;
-                }
-
-                y_cursor += usual_height;
-            }
-
-            //Assign minimal
-            piece.x = Some(min_info.1);
-            piece.y = Some(min_info.2);
-            piece.diff = min_info.0;
-
-            continue;
-        }
-
-        //BOTTOM ROW
-        if piece.image.height() != usual_height {
-            let height = solved_image.height() - (vertical_pieces_num - 1) * usual_height;
-
-            let mut x_cursor = 0;
-            loop {
-                if x_cursor == (horizontal_pieces_num - 1) * usual_width {
-                    break;
-                }
-
-                //Cut image from solved image
-                let mut original_piece = DynamicImage::new_rgba8(usual_width, height);
-                for src_x in 0..usual_width {
-                    for src_y in 0..height {
-                        let pixel = solved_image.get_pixel(x_cursor + src_x, (vertical_pieces_num - 1) * usual_height + src_y);
-                        original_piece.put_pixel(src_x, src_y, pixel);
-                    }
-                }
-
-                //Compare
-                let diff = comparing::compare_pieces_hsv(&piece.image, &original_piece);
-                if diff < min_info.0 {
-                    min_info.0 = diff;
-                    min_info.1 = x_cursor / usual_width;
-                    min_info.2 = vertical_pieces_num - 1;
-                }
-
-                x_cursor += usual_width;
-            }
-
-            //Assign minimal
-            piece.x = Some(min_info.1);
-            piece.y = Some(min_info.2);
-
-
-            continue;
+fn index_pieces(solved_image: DynamicImage, pieces: &mut Vec<Piece>, usual_width: u32, usual_height: u32, horizontal_pieces_num: u32, vertical_pieces_num: u32) {
+    //Even pieces matrix
+    let mut x_cursor = 0;
+    loop{
+        if x_cursor == (horizontal_pieces_num - 1) * usual_width {
+            break;
         }
 
 
-        let mut x_cursor = 0;
+        let mut y_cursor = 0;
         loop {
-            if x_cursor == (horizontal_pieces_num - 1) * usual_width {
+            if y_cursor == (vertical_pieces_num - 1) * usual_height {
                 break;
             }
 
-            let mut y_cursor = 0;
-            loop {
-                if y_cursor == (vertical_pieces_num - 1) * usual_height {
-                    break;
+            //Cut image from solved image
+            let mut original_piece = DynamicImage::new_rgba8(usual_width, usual_height);
+            for x in 0..usual_width {
+                for y in 0..usual_height {
+                    let pixel = solved_image.get_pixel(x_cursor + x, y_cursor + y);
+                    original_piece.put_pixel(x, y, pixel);
                 }
-
-                //Cut image from solved image
-                let mut original_piece = DynamicImage::new_rgba8(usual_width, usual_height);
-                for src_x in 0..usual_width {
-                    for src_y in 0..usual_height {
-                        let pixel = solved_image.get_pixel(x_cursor + src_x, y_cursor + src_y);
-                        original_piece.put_pixel(src_x, src_y, pixel);
-                    }
-                }
-
-                //Compare
-                let diff = comparing::compare_pieces_hsv(&piece.image, &original_piece);
-                if diff < min_info.0 {
-                    min_info.0 = diff;
-                    min_info.1 = x_cursor / usual_width;
-                    min_info.2 = y_cursor / usual_height;
-                }
-
-                y_cursor += usual_height;
             }
-            x_cursor += usual_width;
+
+            //Find best piece for it
+            let mut min_diff = u32::MAX;
+            let mut min_idx = 0;
+            for piece in &mut *pieces{
+                let diff = comparing::compare_pieces_hsv(&original_piece, &piece.image);
+                if diff < min_diff{
+                    min_diff = diff;
+                    min_idx = piece.index;
+                }
+            }
+
+            //Assign coordinates of OG piece to best piece candidate
+            let mut winner_piece = &mut pieces[min_idx as usize];
+            winner_piece.x = Some(x_cursor/usual_width);
+            winner_piece.y = Some(y_cursor/usual_height);
+
+            y_cursor += usual_height;
+        }
+        x_cursor += usual_width;
+    }
+
+    //Get marginal width and size
+    let end_width = solved_image.width() - (horizontal_pieces_num - 1) * usual_width;
+    let end_height = solved_image.height() - (vertical_pieces_num- 1) * usual_height;
+
+
+    //Far right column
+    let mut y_cursor = 0;
+    loop {
+        if y_cursor == (vertical_pieces_num - 1) * usual_height {
+            break;
         }
 
-        //Assign minimal
-        piece.x = Some(min_info.1);
-        piece.y = Some(min_info.2);
+        //Cut image from solved image
+        let mut original_piece = DynamicImage::new_rgba8(end_width, usual_height);
+        for x in 0..end_width {
+            for y in 0..usual_height {
+                let pixel = solved_image.get_pixel((horizontal_pieces_num - 1) * usual_width + x, y_cursor + y);
+                original_piece.put_pixel(x, y, pixel);
+            }
+        }
+
+        //Find best piece for it
+        let mut min_diff = u32::MAX;
+        let mut min_idx = 0;
+        for piece in &mut *pieces{
+            let diff = comparing::compare_pieces_hsv(&original_piece, &piece.image);
+            if diff < min_diff{
+                min_diff = diff;
+                min_idx = piece.index;
+            }
+        }
+
+        //Assign coordinates of OG piece to best piece candidate
+        let mut winner_piece = &mut pieces[min_idx as usize];
+        winner_piece.x = Some(x_cursor/usual_width);
+        winner_piece.y = Some(y_cursor/usual_height);
+
+        y_cursor += usual_height;
     }
+
+
+    //Bottom column
+    let mut x_cursor = 0;
+    loop {
+        if x_cursor == (horizontal_pieces_num - 1) * usual_width {
+            break;
+        }
+
+        //Cut image from solved image
+        let mut original_piece = DynamicImage::new_rgba8(usual_width, end_height);
+        for x in 0..usual_width {
+            for y in 0..end_height {
+                let pixel = solved_image.get_pixel(x_cursor + x, (vertical_pieces_num - 1) * usual_height + y);
+                original_piece.put_pixel(x, y, pixel);
+            }
+        }
+
+        //Find best piece for it
+        let mut min_diff = u32::MAX;
+        let mut min_idx = 0;
+        for piece in &mut *pieces{
+            let diff = comparing::compare_pieces_hsv(&original_piece, &piece.image);
+            if diff < min_diff{
+                min_diff = diff;
+                min_idx = piece.index;
+            }
+        }
+
+        //Assign coordinates of OG piece to best piece candidate
+        let mut winner_piece = &mut pieces[min_idx as usize];
+        winner_piece.x = Some(x_cursor/usual_width);
+        winner_piece.y = Some(y_cursor/usual_height);
+
+        x_cursor += usual_width;
+    }
+
+    //Piece in bottom right corner
+
+    //Cut image from solved image
+    let mut original_piece = DynamicImage::new_rgba8(end_width, end_height);
+    for x in 0..end_width {
+        for y in 0..end_height {
+            let pixel = solved_image.get_pixel((horizontal_pieces_num - 1) * usual_width + x, (vertical_pieces_num - 1) * usual_height + y);
+            original_piece.put_pixel(x, y, pixel);
+        }
+    }
+
+    //Find best piece for it
+    let mut min_diff = u32::MAX;
+    let mut min_idx = 0;
+    for piece in &mut *pieces{
+        let diff = comparing::compare_pieces_hsv(&original_piece, &piece.image);
+        if diff < min_diff{
+            min_diff = diff;
+            min_idx = piece.index;
+        }
+    }
+
+    //Assign coordinates of OG piece to best piece candidate
+    let mut winner_piece = &mut pieces[min_idx as usize];
+    winner_piece.x = Some(x_cursor/usual_width);
+    winner_piece.y = Some(y_cursor/usual_height);
+
 }
 
 
