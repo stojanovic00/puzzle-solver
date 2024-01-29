@@ -106,13 +106,14 @@ pub fn compare_right_edge_hue(img1: &DynamicImage, img2: &DynamicImage, threshol
         // Left edge
         let pixel2 = img2.get_pixel(0, height_idx);
 
-       let hue1 = colors_transform::Rgb::from(pixel1[0] as f32,pixel1[1] as f32,pixel1[2] as f32)
-           .to_hsl().get_hue();
-       let hue2 = colors_transform::Rgb::from(pixel2[0] as f32,pixel2[1] as f32,pixel2[2] as f32)
-           .to_hsl().get_hue();
+       let hsv1 = colors_transform::Rgb::from(pixel1[0] as f32,pixel1[1] as f32,pixel1[2] as f32).to_hsl();
+       let hue_lightness1 = hsv1.get_hue() + hsv1.get_lightness();
+
+        let hsv2 = colors_transform::Rgb::from(pixel2[0] as f32,pixel2[1] as f32,pixel2[2] as f32).to_hsl();
+        let hue_lightness2 = hsv2.get_hue() + hsv2.get_lightness();
 
 
-        let hue_diff = (hue1 - hue2).abs();
+        let hue_diff = (hue_lightness1 - hue_lightness2).abs();
         difference += hue_diff;
     }
 

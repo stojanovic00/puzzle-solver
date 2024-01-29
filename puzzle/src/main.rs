@@ -37,22 +37,17 @@ fn main() {
      let comp_thresh = 0.0;
     //TESTING
 
-   //  let piece7 = &pieces[9];
-   //  let piece8 = &pieces[10];
+   //  let piece7 = &pieces[27];
+   //  let piece6 = &pieces[26];
    //  let piece1 = &pieces[0];
    //  let edgy_image = DynamicImage::new_rgba8(1,10);
    //
-   //  let difference78 = comparing::compare_right_edge_hue(&piece7.image, &piece8.image, comp_thresh) as i32;
-   //  let difference81 = comparing::compare_right_edge_hue(&piece8.image, &piece1.image, comp_thresh) as i32;
+   //  let difference67 = comparing::compare_right_edge_hue(&piece6.image, &piece7.image, comp_thresh) as i32;
+   //  let difference61 = comparing::compare_right_edge_hue(&piece6.image, &piece1.image, comp_thresh) as i32;
    //
-   //  println!("DIFF 7 and 8 RIGHT: {}", difference78);
-   //  println!("DIFF 8 and 1 RIGHT: {}", difference81);
+   //  println!("DIFF 6 and 7 RIGHT: {}", difference67);
+   //  println!("DIFF 6 and 1 RIGHT: {}", difference61);
    //
-   //  let difference87_left = comparing::compare_left_edge_hue(&piece8.image, &piece7.image, comp_thresh) as i32;
-   //  let difference18_left = comparing::compare_left_edge_hue(&piece1.image, &piece8.image, comp_thresh) as i32;
-   //
-   //  println!("DIFF 7 and 8 LEFT: {}", difference87_left);
-   //  println!("DIFF 8 and 1 LEFT: {}", difference18_left);
    // return;
     //TESTING
 
@@ -91,12 +86,19 @@ fn solve(mut pieces: &mut Vec<Piece>, mut pieces_ro: &mut Vec<Piece>, comp_thres
 
         rm_right_neighbors_from_righ_edge_pieces(&mut pieces, vertical_pieces_num);
 
+        println!("AFTER RIGHT EDGE");
         for piece in & *pieces{
            println!("{}", piece) ;
         }
 
         filter_not_best_buddies_right(&mut pieces, &mut pieces_ro, comp_thresh);
         filter_not_best_buddies_left(&mut pieces, &mut pieces_ro, comp_thresh);
+
+        println!("AFTER BEST BUDDY");
+        for piece in & *pieces{
+            println!("{}", piece) ;
+        }
+        println!("ITER END");
     }
 
     //FINDING LEFT EDGE PIECES
