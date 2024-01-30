@@ -3,5 +3,5 @@
 - 2: 15x1 (dims: 300x11) WORKS
 - 2-1: 8x30 (dims: 10x21) WORKS 
 - 3: 12x16 (dims: 16x16) 
-- 4: 1x16 (dims:16x190) WORKS
+- 4: 1x16 (dims:17x183) WORKS
 - 5: 7x12 (dims:54x52) WORKS

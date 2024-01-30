@@ -7,6 +7,7 @@ mod piece;
 
 use std::collections::{HashMap};
 use std::env;
+use std::path::Path;
 use image::{DynamicImage, GenericImage, GenericImageView};
 use crate::piece::Piece;
 
@@ -27,6 +28,25 @@ fn main() {
         eprintln!("Failed to open image: {:?}", solved_path);
         DynamicImage::new_rgba8(1, 1)
     });
+
+    //Obtain soved image name withou extension
+    let solved_path = Path::new(solved_path);
+
+    // Extract the file name (if any)
+    let solved_image_name = if let Some(file_name) = solved_path.file_name() {
+        if let Some(file_name_str) = file_name.to_str() {
+            file_name_str.split(".").next().unwrap_or(file_name_str)
+        } else {
+            println!("Unable to convert file name to string");
+            ""
+        }
+    } else {
+        println!("No file name found in the path");
+        ""
+    };
+
+
+
 
     let mut pieces = piece::load_images_from_folder(puzzle_folder_path);
 
@@ -101,7 +121,7 @@ fn main() {
         }
     }
 
-    merge_pieces(&mut pieces, horizontal_pieces_num, vertical_pieces_num);
+    merge_pieces(&mut pieces, horizontal_pieces_num, vertical_pieces_num, solved_image_name.to_string());
 }
 
 fn find_unassigned_coordinates(pieces: &mut Vec<Piece>, usual_width: u32, usual_height: u32, horizontal_pieces_num: u32, vertical_pieces_num: u32) -> Vec<(u32,u32)> {
@@ -164,7 +184,7 @@ fn find_unassigned_coordinates(pieces: &mut Vec<Piece>, usual_width: u32, usual_
     unassigned_coordinates
 }
 
-fn merge_pieces(pieces: &mut Vec<Piece>, horizontal_pieces_num: u32, vertical_pieces_num: u32) {
+fn merge_pieces(pieces: &mut Vec<Piece>, horizontal_pieces_num: u32, vertical_pieces_num: u32, image_name: String) {
 // Create a HashMap to group pieces by their y values
     let mut y_groups: HashMap<Option<u32>, Vec<&Piece>> = HashMap::new();
 
@@ -207,15 +227,16 @@ fn merge_pieces(pieces: &mut Vec<Piece>, horizontal_pieces_num: u32, vertical_pi
 
     horizontal_pieces.sort_by_key(|piece| piece.y.unwrap_or_default());
 
+    let image_path = format!("solved/{}_solved.jpg", image_name);
     //Create final image
     if horizontal_pieces.len() > 1{
         let mut solved_image= stitching::stitch_bottom(&horizontal_pieces[0].image, &horizontal_pieces[1].image, 0);
         for idx in 2..vertical_pieces_num - 1 {
             solved_image = stitching::stitch_bottom(&solved_image, &horizontal_pieces[idx as usize].image, 0);
         }
-        solved_image.save("FINAL.jpg").expect("Failed to save final image.");
+        solved_image.save(image_path).expect("Failed to save final image.");
     } else{
-        horizontal_pieces[0].image.save("FINAL.jpg").expect("Failed to save final image.");
+        horizontal_pieces[0].image.save(image_path).expect("Failed to save final image.");
     }
 }
 
