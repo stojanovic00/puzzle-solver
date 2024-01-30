@@ -33,10 +33,14 @@ fn main() {
     let (usual_width, usual_height) = piece::find_most_common_dimensions(&pieces);
 
     let horizontal_pieces_num =  solved_image.width() / usual_width;
-    let vertical_pieces_num =  solved_image.height() / usual_height;
+    let  vertical_pieces_num =  solved_image.height() / usual_height;
 
 
     index_pieces(&solved_image, &mut pieces, usual_width, usual_height, horizontal_pieces_num, vertical_pieces_num);
+
+    for piece in &pieces{
+        println!("{}", piece);
+    }
 
 
     //Resolve unassigned
@@ -56,8 +60,22 @@ fn main() {
         //Assign left over pieces and coordinates
         for coordinate in &unassigned_coords{
 
+
+            //resolving piece size depending on coordinates
+            let og_piece_width = if coordinate.0 < (horizontal_pieces_num - 1) * usual_width{
+                usual_width
+            } else {
+                solved_image.width() - ((horizontal_pieces_num - 1) * usual_width)
+            };
+
+            let og_piece_height = if coordinate.1 < (vertical_pieces_num - 1) * usual_height{
+                usual_height
+            } else {
+                solved_image.height() - ((vertical_pieces_num - 1) * usual_height)
+            };
+
             //Cut image from solved image
-            let mut original_piece = DynamicImage::new_rgba8(usual_width, usual_height);
+            let mut original_piece = DynamicImage::new_rgba8(og_piece_width, og_piece_height);
             for x in 0..usual_width {
                 for y in 0..usual_height {
                     let pixel = solved_image.get_pixel(coordinate.0 + x, coordinate.1 + y);
@@ -167,31 +185,38 @@ fn merge_pieces(pieces: &mut Vec<Piece>, horizontal_pieces_num: u32, vertical_pi
     // Create horizontal images
     let mut horizontal_pieces: Vec<Piece> = vec![];
     for (y_value, piece_group) in &y_groups {
-        let mut horizontal_image = stitching::stitch_right(&piece_group[0].image, &piece_group[1].image, 0);
-        for idx in 2..horizontal_pieces_num - 1 {
-            horizontal_image = stitching::stitch_right(&horizontal_image, &piece_group[idx as usize].image, 0);
-        }
+        if piece_group.len() > 1{
+            let mut horizontal_image = stitching::stitch_right(&piece_group[0].image, &piece_group[1].image, 0);
+            for idx in 2..horizontal_pieces_num - 1 {
+                horizontal_image = stitching::stitch_right(&horizontal_image, &piece_group[idx as usize].image, 0);
+            }
 
-        let horizontal_piece = Piece {
-            index: y_value.unwrap(),
-            image: horizontal_image,
-            x: Some(0),
-            y: Some(y_value.unwrap()),
-            file_name: "temp".to_string(),
-            diff: 0
-        };
-        horizontal_pieces.push(horizontal_piece);
+            let horizontal_piece = Piece {
+                index: y_value.unwrap(),
+                image: horizontal_image,
+                x: Some(0),
+                y: Some(y_value.unwrap()),
+                file_name: "temp".to_string(),
+                diff: 0
+            };
+            horizontal_pieces.push(horizontal_piece);
+        } else{
+            horizontal_pieces.push(piece_group[0].clone())
+        }
     }
 
     horizontal_pieces.sort_by_key(|piece| piece.y.unwrap_or_default());
 
     //Create final image
-    let mut solved_image = stitching::stitch_bottom(&horizontal_pieces[0].image, &horizontal_pieces[1].image, 0);
-    for idx in 2..vertical_pieces_num - 1 {
-        solved_image = stitching::stitch_bottom(&solved_image, &horizontal_pieces[idx as usize].image, 0);
+    if horizontal_pieces.len() > 1{
+        let mut solved_image= stitching::stitch_bottom(&horizontal_pieces[0].image, &horizontal_pieces[1].image, 0);
+        for idx in 2..vertical_pieces_num - 1 {
+            solved_image = stitching::stitch_bottom(&solved_image, &horizontal_pieces[idx as usize].image, 0);
+        }
+        solved_image.save("FINAL.jpg").expect("Failed to save final image.");
+    } else{
+        horizontal_pieces[0].image.save("FINAL.jpg").expect("Failed to save final image.");
     }
-
-    solved_image.save("FINAL.jpg").expect("Failed to save final image.");
 }
 
 

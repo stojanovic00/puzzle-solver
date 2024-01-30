@@ -1,0 +1,4 @@
+- 1: 3x4 (dims: 66x66) WORKS
+- 1-1: 31x12 (dims: 22x6) 
+- 2: 15x1 (dims: 300x11) WORKS
+- 4: 1x16 (dims:16x190) WORKS
