@@ -42,7 +42,7 @@ fn main() {
     //Resolve unassigned
     loop{
         println!("GOT IN");
-        let  unassigned_pieces: Vec<Piece> = pieces
+        let mut  unassigned_pieces: Vec<Piece> = pieces
             .iter()
             .filter(|piece| piece.x.is_none() && piece.y.is_none()).cloned()
             .collect();
@@ -79,6 +79,7 @@ fn main() {
             winner_piece.x = Some(coordinate.0);
             winner_piece.y = Some(coordinate.1);
 
+            unassigned_pieces.retain(|piece| piece.index != winner_piece.index);
         }
     }
 
