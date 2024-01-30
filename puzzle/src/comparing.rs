@@ -4,7 +4,7 @@ use colors_transform::Color;
 
 
 // Compares right edge of img1 and left edge of img2 and returns difference
-pub fn compare_right_edge_abs(img1: &DynamicImage, img2: &DynamicImage, threshold: i32) -> u32{
+pub fn compare_right_edge_abs(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0;
 
     if img1.height() != img2.height(){
@@ -21,9 +21,7 @@ pub fn compare_right_edge_abs(img1: &DynamicImage, img2: &DynamicImage, threshol
         for channel_idx in 0..4{
             let mut  channel_diff = pixel1[channel_idx] as i32 - pixel2[channel_idx] as i32;
             channel_diff = channel_diff.abs();
-            if channel_diff > threshold{
-                pixel_diff += channel_diff;
-            }
+            pixel_diff += channel_diff;
         }
         difference += pixel_diff;
     }
@@ -93,7 +91,7 @@ fn euclidean_distance_rgba(p1: Rgba<u8>, p2: Rgba<u8>) -> f64 {
 }
 
 
-pub fn compare_right_edge_hue(img1: &DynamicImage, img2: &DynamicImage, threshold: f32) -> u32{
+pub fn compare_right_edge_hue(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0.0;
 
     if img1.height() != img2.height(){
@@ -120,7 +118,7 @@ pub fn compare_right_edge_hue(img1: &DynamicImage, img2: &DynamicImage, threshol
     return difference as u32
 }
 
-pub fn compare_right_edge_delta_e(img1: &DynamicImage, img2: &DynamicImage, threshold: f32) -> u32{
+pub fn compare_right_edge_delta_e(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0.0;
 
     if img1.height() != img2.height(){
@@ -152,7 +150,7 @@ pub fn compare_right_edge_delta_e(img1: &DynamicImage, img2: &DynamicImage, thre
 
 //LEFT
 //left of img1 with right of img2
-pub fn compare_left_edge_hue(img1: &DynamicImage, img2: &DynamicImage, threshold: f32) -> u32{
+pub fn compare_left_edge_hue(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0.0;
 
     if img1.height() != img2.height(){
