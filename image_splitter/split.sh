@@ -1,2 +1,2 @@
-./image_splitter split_images images/slika5.jpg 7 12
+./image_splitter split_images images/slika1.jpg 31 12
 

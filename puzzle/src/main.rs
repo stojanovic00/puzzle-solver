@@ -82,13 +82,13 @@ fn main() {
 
 
             //resolving piece size depending on coordinates
-            let og_piece_width = if coordinate.0 < (horizontal_pieces_num - 1) * usual_width{
+            let og_piece_width = if coordinate.0 < (horizontal_pieces_num - 1) {
                 usual_width
             } else {
                 solved_image.width() - ((horizontal_pieces_num - 1) * usual_width)
             };
 
-            let og_piece_height = if coordinate.1 < (vertical_pieces_num - 1) * usual_height{
+            let og_piece_height = if coordinate.1 < (vertical_pieces_num - 1){
                 usual_height
             } else {
                 solved_image.height() - ((vertical_pieces_num - 1) * usual_height)
@@ -111,6 +111,10 @@ fn main() {
                     min_diff = diff;
                     min_index = piece.index;
                 }
+            }
+
+            if min_diff == u32::MAX{
+                continue;
             }
 
             let winner_piece = &mut pieces[min_index as usize];
@@ -276,6 +280,10 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
                 }
             }
 
+            if min_diff == u32::MAX{
+                continue;
+            }
+
             //Assign coordinates of OG piece to best piece candidate
             let winner_piece = &mut pieces[min_idx as usize];
             winner_piece.x = Some(x_cursor/usual_width);
@@ -320,7 +328,7 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
 
         //Assign coordinates of OG piece to best piece candidate
         let winner_piece = &mut pieces[min_idx as usize];
-        winner_piece.x = Some(x_cursor/usual_width);
+        winner_piece.x = Some((horizontal_pieces_num - 1) * usual_width /usual_width);
         winner_piece.y = Some(y_cursor/usual_height);
 
         y_cursor += usual_height;
@@ -357,7 +365,7 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
         //Assign coordinates of OG piece to best piece candidate
         let winner_piece = &mut pieces[min_idx as usize];
         winner_piece.x = Some(x_cursor/usual_width);
-        winner_piece.y = Some(y_cursor/usual_height);
+        winner_piece.y = Some((vertical_pieces_num - 1) * usual_height /usual_height);
 
         x_cursor += usual_width;
     }
@@ -386,8 +394,8 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
 
     //Assign coordinates of OG piece to best piece candidate
     let winner_piece = &mut pieces[min_idx as usize];
-    winner_piece.x = Some(x_cursor/usual_width);
-    winner_piece.y = Some(y_cursor/usual_height);
+    winner_piece.x = Some((horizontal_pieces_num - 1) * usual_width /usual_width);
+    winner_piece.y = Some((vertical_pieces_num - 1) * usual_height /usual_height);
 
 }
 
