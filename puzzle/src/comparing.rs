@@ -4,6 +4,7 @@ use colors_transform::Color;
 
 
 // Compares right edge of img1 and left edge of img2 and returns difference
+#[allow(dead_code)]
 pub fn compare_right_edge_abs(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0;
 
@@ -31,7 +32,7 @@ pub fn compare_right_edge_abs(img1: &DynamicImage, img2: &DynamicImage) -> u32{
 }
 
 
-//JOS JE GORE AAAAAAAAAAAAAAAA
+#[allow(dead_code)]
 pub fn compare_right_edge_sq(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0;
 
@@ -57,7 +58,7 @@ pub fn compare_right_edge_sq(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     return difference as u32
 }
 
-//MALO BOLJEEEEEEE
+#[allow(dead_code)]
 pub fn compare_right_edge_euclidean(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0;
 
@@ -91,6 +92,7 @@ fn euclidean_distance_rgba(p1: Rgba<u8>, p2: Rgba<u8>) -> f64 {
 }
 
 
+#[allow(dead_code)]
 pub fn compare_right_edge_hue(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0.0;
 
@@ -118,6 +120,7 @@ pub fn compare_right_edge_hue(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     return difference as u32
 }
 
+#[allow(dead_code)]
 pub fn compare_right_edge_delta_e(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0.0;
 
@@ -150,6 +153,7 @@ pub fn compare_right_edge_delta_e(img1: &DynamicImage, img2: &DynamicImage) -> u
 
 //LEFT
 //left of img1 with right of img2
+#[allow(dead_code)]
 pub fn compare_left_edge_hue(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0.0;
 
@@ -206,6 +210,8 @@ pub fn compare_pieces_rgb(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     return difference as u32
 }
 
+
+#[allow(dead_code)]
 pub fn compare_pieces_hsv(img1: &DynamicImage, img2: &DynamicImage) -> u32{
     let mut difference = 0.0;
 

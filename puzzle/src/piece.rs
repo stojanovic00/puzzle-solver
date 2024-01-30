@@ -7,10 +7,10 @@ use image::DynamicImage;
 pub struct Piece{
     pub index: u32,
     pub image: DynamicImage,
+    //TODO DELETE when finished
     pub file_name: String,
     pub x: Option<u32>,
     pub y: Option<u32>,
-    pub diff: u32
 }
 impl Piece{
     pub fn new(img: DynamicImage, idx: u32, filename: String) -> Self{
@@ -19,8 +19,7 @@ impl Piece{
             image : img,
             file_name: filename,
             x : None,
-            y: None,
-            diff: u32::MAX
+            y: None
         }
     }
 }

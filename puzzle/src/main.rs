@@ -1,6 +1,3 @@
-//TODO: remove when finished implementation
-#![allow(dead_code)]
-
 mod stitching;
 mod comparing;
 mod piece;
@@ -29,7 +26,7 @@ fn main() {
         DynamicImage::new_rgba8(1, 1)
     });
 
-    //Obtain soved image name withou extension
+    //Obtain solved image name without extension
     let solved_path = Path::new(solved_path);
 
     // Extract the file name (if any)
@@ -46,9 +43,8 @@ fn main() {
     };
 
 
-
-
     let mut pieces = piece::load_images_from_folder(puzzle_folder_path);
+    //Processing
 
     let (usual_width, usual_height) = piece::find_most_common_dimensions(&pieces);
 
@@ -58,25 +54,26 @@ fn main() {
 
     index_pieces(&solved_image, &mut pieces, usual_width, usual_height, horizontal_pieces_num, vertical_pieces_num);
 
-    for piece in &pieces{
-        println!("{}", piece);
-    }
+    resolve_unassigned(solved_image, &mut pieces, usual_width, usual_height, horizontal_pieces_num, vertical_pieces_num);
 
-    //Resolve unassigned
-    loop{
-        let mut  unassigned_pieces: Vec<Piece> = pieces
+    merge_pieces(&mut pieces, horizontal_pieces_num, vertical_pieces_num, solved_image_name.to_string());
+}
+
+fn resolve_unassigned(solved_image: DynamicImage, mut pieces: &mut Vec<Piece>, usual_width: u32, usual_height: u32, horizontal_pieces_num: u32, vertical_pieces_num: u32) {
+    loop {
+        let mut unassigned_pieces: Vec<Piece> = pieces
             .iter()
             .filter(|piece| piece.x.is_none() && piece.y.is_none()).cloned()
             .collect();
 
-        if unassigned_pieces.len() == 0{
+        if unassigned_pieces.len() == 0 {
             break;
         }
 
-        let  unassigned_coords = find_unassigned_coordinates(&mut pieces, usual_width, usual_height, horizontal_pieces_num, vertical_pieces_num);
+        let unassigned_coords = find_unassigned_coordinates(&mut pieces, usual_width, usual_height, horizontal_pieces_num, vertical_pieces_num);
 
         //Assign left over pieces and coordinates
-        for coordinate in &unassigned_coords{
+        for coordinate in &unassigned_coords {
 
 
             //resolving piece size depending on coordinates
@@ -86,7 +83,7 @@ fn main() {
                 solved_image.width() - ((horizontal_pieces_num - 1) * usual_width)
             };
 
-            let og_piece_height = if coordinate.1 < (vertical_pieces_num - 1){
+            let og_piece_height = if coordinate.1 < (vertical_pieces_num - 1) {
                 usual_height
             } else {
                 solved_image.height() - ((vertical_pieces_num - 1) * usual_height)
@@ -103,9 +100,9 @@ fn main() {
 
             let mut min_diff = u32::MAX;
             let mut min_index = 0;
-            for piece in &unassigned_pieces{
+            for piece in &unassigned_pieces {
                 let diff = comparing::compare_pieces_rgb(&piece.image, &original_piece);
-                if diff < min_diff{
+                if diff < min_diff {
                     min_diff = diff;
                     min_index = piece.index;
                 }
@@ -119,12 +116,10 @@ fn main() {
             unassigned_pieces.retain(|piece| piece.index != winner_piece.index);
         }
     }
-
-    merge_pieces(&mut pieces, horizontal_pieces_num, vertical_pieces_num, solved_image_name.to_string());
 }
 
 fn find_unassigned_coordinates(pieces: &mut Vec<Piece>, usual_width: u32, usual_height: u32, horizontal_pieces_num: u32, vertical_pieces_num: u32) -> Vec<(u32,u32)> {
-//Check even submatrix
+//Check even sub-matrix
     let mut unassigned_coordinates: Vec<(u32, u32)> = vec![];
 
     let mut x_cursor = 0;
@@ -158,8 +153,8 @@ fn find_unassigned_coordinates(pieces: &mut Vec<Piece>, usual_width: u32, usual_
             break;
         }
 
-        if !pieces.iter().any(|piece| piece.x == Some((horizontal_pieces_num - 1) * usual_width / usual_width) && piece.y == Some(y_cursor / usual_height)) {
-            unassigned_coordinates.push(((horizontal_pieces_num - 1) * usual_width / usual_width, y_cursor / usual_height));
+        if !pieces.iter().any(|piece| piece.x == Some(horizontal_pieces_num - 1) && piece.y == Some(y_cursor / usual_height)) {
+            unassigned_coordinates.push((horizontal_pieces_num - 1, y_cursor / usual_height));
         }
 
 
@@ -173,8 +168,8 @@ fn find_unassigned_coordinates(pieces: &mut Vec<Piece>, usual_width: u32, usual_
             break;
         }
 
-        if !pieces.iter().any(|piece| piece.x == Some(x_cursor / usual_width) && piece.y == Some((vertical_pieces_num - 1) * usual_height / usual_height)) {
-            unassigned_coordinates.push((x_cursor / usual_width, (vertical_pieces_num - 1) * usual_height / usual_height));
+        if !pieces.iter().any(|piece| piece.x == Some(x_cursor / usual_width) && piece.y == Some(vertical_pieces_num - 1 )) {
+            unassigned_coordinates.push((x_cursor / usual_width, vertical_pieces_num - 1 ));
         }
 
         x_cursor += usual_width;
@@ -197,10 +192,6 @@ fn merge_pieces(pieces: &mut Vec<Piece>, horizontal_pieces_num: u32, vertical_pi
         piece_group.sort_by_key(|piece| piece.x.unwrap_or_default());
     }
 
-    for (key, piece_group) in y_groups.iter_mut() {
-        println!("{}: {}", key.unwrap_or_default(), piece_group.len());
-    }
-
     // Create horizontal images
     let mut horizontal_pieces: Vec<Piece> = vec![];
     for (y_value, piece_group) in &y_groups {
@@ -215,8 +206,7 @@ fn merge_pieces(pieces: &mut Vec<Piece>, horizontal_pieces_num: u32, vertical_pi
                 image: horizontal_image,
                 x: Some(0),
                 y: Some(y_value.unwrap()),
-                file_name: "temp".to_string(),
-                diff: 0
+                file_name: "temp".to_string()
             };
             horizontal_pieces.push(horizontal_piece);
         } else{
@@ -320,7 +310,7 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
 
         //Assign coordinates of OG piece to best piece candidate
         let winner_piece = &mut pieces[min_idx as usize];
-        winner_piece.x = Some((horizontal_pieces_num - 1) * usual_width /usual_width);
+        winner_piece.x = Some(horizontal_pieces_num - 1);
         winner_piece.y = Some(y_cursor/usual_height);
 
         y_cursor += usual_height;
@@ -357,7 +347,7 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
         //Assign coordinates of OG piece to best piece candidate
         let winner_piece = &mut pieces[min_idx as usize];
         winner_piece.x = Some(x_cursor/usual_width);
-        winner_piece.y = Some((vertical_pieces_num - 1) * usual_height /usual_height);
+        winner_piece.y = Some(vertical_pieces_num - 1);
 
         x_cursor += usual_width;
     }
@@ -386,13 +376,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
 
     //Assign coordinates of OG piece to best piece candidate
     let winner_piece = &mut pieces[min_idx as usize];
-    winner_piece.x = Some((horizontal_pieces_num - 1) * usual_width /usual_width);
-    winner_piece.y = Some((vertical_pieces_num - 1) * usual_height /usual_height);
-
+    winner_piece.x = Some(horizontal_pieces_num - 1);
+    winner_piece.y = Some(vertical_pieces_num - 1);
 }
-
-
-
-
-
-
