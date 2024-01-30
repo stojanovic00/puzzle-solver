@@ -8,7 +8,7 @@ mod piece;
 use std::collections::{HashMap};
 use std::env;
 use std::path::Path;
-use image::{DynamicImage, GenericImage, GenericImageView};
+use image::{DynamicImage, GenericImage, GenericImageView };
 use crate::piece::Piece;
 
 
@@ -62,10 +62,8 @@ fn main() {
         println!("{}", piece);
     }
 
-
     //Resolve unassigned
     loop{
-        println!("GOT IN");
         let mut  unassigned_pieces: Vec<Piece> = pieces
             .iter()
             .filter(|piece| piece.x.is_none() && piece.y.is_none()).cloned()
@@ -106,16 +104,13 @@ fn main() {
             let mut min_diff = u32::MAX;
             let mut min_index = 0;
             for piece in &unassigned_pieces{
-                let diff = comparing::compare_pieces_hsv(&piece.image, &original_piece);
+                let diff = comparing::compare_pieces_rgb(&piece.image, &original_piece);
                 if diff < min_diff{
                     min_diff = diff;
                     min_index = piece.index;
                 }
             }
 
-            if min_diff == u32::MAX{
-                continue;
-            }
 
             let winner_piece = &mut pieces[min_index as usize];
             winner_piece.x = Some(coordinate.0);
@@ -273,16 +268,13 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
             let mut min_diff = u32::MAX;
             let mut min_idx = 0;
             for piece in &mut *pieces{
-                let diff = comparing::compare_pieces_hsv(&original_piece, &piece.image);
+                let diff = comparing::compare_pieces_rgb(&original_piece, &piece.image);
                 if diff < min_diff{
                     min_diff = diff;
                     min_idx = piece.index;
                 }
             }
 
-            if min_diff == u32::MAX{
-                continue;
-            }
 
             //Assign coordinates of OG piece to best piece candidate
             let winner_piece = &mut pieces[min_idx as usize];
@@ -319,7 +311,7 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
         let mut min_diff = u32::MAX;
         let mut min_idx = 0;
         for piece in &mut *pieces{
-            let diff = comparing::compare_pieces_hsv(&original_piece, &piece.image);
+            let diff = comparing::compare_pieces_rgb(&original_piece, &piece.image);
             if diff < min_diff{
                 min_diff = diff;
                 min_idx = piece.index;
@@ -355,7 +347,7 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
         let mut min_diff = u32::MAX;
         let mut min_idx = 0;
         for piece in &mut *pieces{
-            let diff = comparing::compare_pieces_hsv(&original_piece, &piece.image);
+            let diff = comparing::compare_pieces_rgb(&original_piece, &piece.image);
             if diff < min_diff{
                 min_diff = diff;
                 min_idx = piece.index;
@@ -385,7 +377,7 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
     let mut min_diff = u32::MAX;
     let mut min_idx = 0;
     for piece in &mut *pieces{
-        let diff = comparing::compare_pieces_hsv(&original_piece, &piece.image);
+        let diff = comparing::compare_pieces_rgb(&original_piece, &piece.image);
         if diff < min_diff{
             min_diff = diff;
             min_idx = piece.index;
