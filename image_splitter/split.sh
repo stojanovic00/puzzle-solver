@@ -1,2 +1,2 @@
-./image_splitter split_images images/slika1.jpg 31 12
+./image_splitter split_images ../puzzle/data/solved/test.jpg 12 15
 
