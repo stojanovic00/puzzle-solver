@@ -44,7 +44,6 @@ fn main() {
         ""
     };
 
-    //TODO: parallelize
     let mut pieces = piece::load_images_from_folder(puzzle_folder_path);
     //Processing
 
@@ -56,10 +55,8 @@ fn main() {
 
     pieces = index_pieces(&solved_image, &mut pieces, usual_width, usual_height, horizontal_pieces_num, vertical_pieces_num);
 
-    //TODO: parallelize if possible
     resolve_unassigned(solved_image, &mut pieces, usual_width, usual_height, horizontal_pieces_num, vertical_pieces_num);
 
-    //TODO: parallel horizontal merging
     merge_pieces(&mut pieces, horizontal_pieces_num, vertical_pieces_num, solved_image_name.to_string());
 }
 
@@ -254,7 +251,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
         jobs[idx as usize] += 1;
     }
 
-    //TODO: PROMENI OVO KAD SVE ZAVRSIS ALOOOUUUUU AAAAAAAAAAAAAAAA
     let pieces_temp = pieces.clone();
     let solved_image_temp = solved_image.clone();
     let pieces_guarded = Arc::new(RwLock::new(pieces_temp));
@@ -290,7 +286,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
         let solved_image = Arc::clone(&solved_image_guarded);
 
         let handle = thread::spawn(move || {
-            //TODO OVO SE MENJA SRB
             let mut x_cursor = if partition_horizontal{
                 offset * usual_width
             } else{
@@ -298,7 +293,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
             };
 
             loop{
-                //TODO OVO SE MENJA SRB
                 if partition_horizontal && x_cursor == (offset + thread_horizontal_pieces_num)* usual_width {
                     break;
                 } else if !partition_horizontal && x_cursor == thread_horizontal_pieces_num * usual_width{
@@ -306,14 +300,12 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
                 }
 
 
-                //TODO OVO SE MENJA SRB
                 let mut y_cursor = if !partition_horizontal{
                     offset * usual_height
                 } else{
                     0
                 };
 
-                //TODO OVO SE MENJA SRB
                 loop {
                     if !partition_horizontal && y_cursor == (offset + thread_vertical_pieces_num) * usual_height{
                         break;
@@ -325,7 +317,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
                     let mut original_piece = DynamicImage::new_rgba8(usual_width, usual_height);
                     for x in 0..usual_width {
                         for y in 0..usual_height {
-                            //TODO PROVERI OVO AAAAAAAAAA
                             let pixel = solved_image.read().unwrap().get_pixel(x_cursor + x, y_cursor + y);
                             original_piece.put_pixel(x, y, pixel);
                         }
@@ -334,7 +325,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
                     //Find best piece for it
                     let mut min_diff = u32::MAX;
                     let mut min_idx = 0;
-                    //TODO PROVERI OVO AAAAAAAAAA
                     for piece in & *pieces.read().unwrap(){
                         let diff = comparing::compare_pieces_rgb(&original_piece, &piece.image);
                         if diff < min_diff{
@@ -345,7 +335,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
 
 
                     //Assign coordinates of OG piece to best piece candidate
-                    //TODO PROVERI OVO AAAAAAAAAA
                     let winner_piece = &mut pieces.write().unwrap()[min_idx as usize];
                     winner_piece.x = Some(x_cursor/usual_width);
                     winner_piece.y = Some(y_cursor/usual_height);
@@ -365,7 +354,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
 
 
     //REVOKE PIECES TO MAIN THREAD
-    //TODO SREDI OVO DA SE NE KLONIRA 1247 puta
     let pieces = pieces_guarded.read().unwrap().clone();
 
 
@@ -383,12 +371,10 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
     for idx in 0..leftover_jobs_num {
         jobs[idx as usize] += 1;
     }
-    //TODO PROVERIIII MARKOOOOO
     //To omit last piece that is uneven
     let jobs_len = jobs.len();
     jobs[(jobs_len - 1) as usize] -= 1;
 
-    //TODO: PROMENI OVO KAD SVE ZAVRSIS ALOOOUUUUU AAAAAAAAAAAAAAAA
     let pieces_temp = pieces.clone();
     let pieces_guarded = Arc::new(RwLock::new(pieces_temp));
 
@@ -408,7 +394,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
         let solved_image = Arc::clone(&solved_image_guarded);
 
         let handle = thread::spawn(move || {
-            //TODO OVO SE MENJA
             let mut y_cursor = offset * usual_height;
             loop {
                 if y_cursor == (offset + thread_vertical_pieces_num) * usual_height{
@@ -428,7 +413,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
                 //Find best piece for it
                 let mut min_diff = u32::MAX;
                 let mut min_idx = 0;
-                //TODO PROVERI OVO AAAAAAAAAA
                 for piece in & *pieces.read().unwrap(){
                     let diff = comparing::compare_pieces_rgb(&original_piece, &piece.image);
                     if diff < min_diff{
@@ -454,7 +438,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
         handle.join().unwrap();
     }
     //REVOKE PIECES TO MAIN THREAD
-    //TODO SREDI OVO DA SE NE KLONIRA 1247 puta
     let pieces = pieces_guarded.read().unwrap().clone();
 
     //BOTTOM ROW
@@ -466,12 +449,10 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
     for idx in 0..leftover_jobs_num {
         jobs[idx as usize] += 1;
     }
-    //TODO PROVERIIII MARKOOOOO
     //To omit last piece that is uneven
     let jobs_len = jobs.len();
     jobs[(jobs_len - 1) as usize] -= 1;
 
-    //TODO: PROMENI OVO KAD SVE ZAVRSIS ALOOOUUUUU AAAAAAAAAAAAAAAA
     let pieces_temp = pieces.clone();
     let pieces_guarded = Arc::new(RwLock::new(pieces_temp));
 
@@ -490,10 +471,8 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
         let solved_image = Arc::clone(&solved_image_guarded);
 
         let handle = thread::spawn(move || {
-            //TODO OVO SE MENJA
             let mut x_cursor = offset * usual_width;
             loop {
-                //TODO OVO SE MENJA
                 if x_cursor == (offset + thread_horizontal_pieces_num) * usual_width {
                     break;
                 }
@@ -502,7 +481,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
                 let mut original_piece = DynamicImage::new_rgba8(usual_width, end_height);
                 for x in 0..usual_width {
                     for y in 0..end_height {
-                        //TODO PROVERIIIIIII AAAAAAAAAAAAAAAAAAAAAAAAAAAA
                         let pixel = solved_image.read().unwrap().get_pixel(x_cursor + x, (vertical_pieces_num - 1) * usual_height + y);
                         original_piece.put_pixel(x, y, pixel);
                     }
@@ -511,7 +489,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
                 //Find best piece for it
                 let mut min_diff = u32::MAX;
                 let mut min_idx = 0;
-                //TODO PROVERIIIIIII AAAAAAAAAAAAAAAAAAAAAAAAAAAA
                 for piece in & *pieces.read().unwrap(){
                     let diff = comparing::compare_pieces_rgb(&original_piece, &piece.image);
                     if diff < min_diff{
@@ -521,7 +498,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
                 }
 
                 //Assign coordinates of OG piece to best piece candidate
-                //TODO PROVERIIIIIII AAAAAAAAAAAAAAAAAAAAAAAAAAAA
                 let winner_piece = &mut pieces.write().unwrap()[min_idx as usize];
                 winner_piece.x = Some(x_cursor/usual_width);
                 winner_piece.y = Some(vertical_pieces_num - 1);
@@ -536,7 +512,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
         handle.join().unwrap();
     }
     //REVOKE PIECES TO MAIN THREAD
-    //TODO SREDI OVO DA SE NE KLONIRA 1247 puta
     let mut pieces = pieces_guarded.read().unwrap().clone();
 
     //Piece in bottom right corner (doesn't need parallelization)
