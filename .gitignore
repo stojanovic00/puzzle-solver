@@ -1,3 +1,4 @@
 puzzle/target/
 image_splitter/target
 *.idea/
+*.fuse*
