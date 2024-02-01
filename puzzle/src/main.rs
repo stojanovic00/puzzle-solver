@@ -45,8 +45,8 @@ fn main() {
     };
 
     let mut pieces = piece::load_images_from_folder(puzzle_folder_path);
-    //Processing
 
+    //Processing
     let (usual_width, usual_height) = piece::find_most_common_dimensions(&pieces);
 
     let horizontal_pieces_num =  solved_image.width() / usual_width;
@@ -233,8 +233,7 @@ fn merge_pieces(pieces: &mut Vec<Piece>, horizontal_pieces_num: u32, vertical_pi
 
 fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_width: u32, usual_height: u32, horizontal_pieces_num: u32, vertical_pieces_num: u32) -> Vec<Piece> {
 
-    //There are 3 loops for even matrix, far right column and bottom row
-    //Each loop will be parallelized separately
+    //There are 3 loops: for even pieces matrix, far right column and bottom row
 
     let core_num = num_cpus::get() as u32;
 
@@ -255,7 +254,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
     let solved_image_temp = solved_image.clone();
     let pieces_guarded = Arc::new(RwLock::new(pieces_temp));
     let solved_image_guarded = Arc::new(RwLock::new(solved_image_temp));
-
 
 
     //EVEN PIECES MATRIX
@@ -355,7 +353,6 @@ fn index_pieces(solved_image: &DynamicImage, pieces: &mut Vec<Piece>, usual_widt
 
     //REVOKE PIECES TO MAIN THREAD
     let pieces = pieces_guarded.read().unwrap().clone();
-
 
 
     //Get marginal width and size
